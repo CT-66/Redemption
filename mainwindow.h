@@ -34,6 +34,7 @@
 #include <QUrl>
 #include "metadatadialog.h"
 #include "scrollinglabel.h"
+#include "ambientbar.h"
 #include <QStandardPaths>
 #include <QProcess>
 
@@ -102,7 +103,10 @@ private:
     QSystemTrayIcon *m_trayIcon = nullptr;
     QMenu           *m_trayMenu = nullptr;
 
+    AmbientBar *m_ambientBar = nullptr;
+
     QPixmap m_currentCover;
+    QPixmap roundedPixmap(const QPixmap &src, int radius);
 
     void setupUi();
     void updateNowPlaying(const QString &filePath);

@@ -51,6 +51,9 @@ public:
 
         QLabel *rgLabel = new QLabel("Replay gain:");
 
+        m_ambientMode = new QCheckBox("Ambient mode (bottom bar)");
+        m_ambientMode->setChecked(settings.value("ui/ambientMode", true).toBool());
+
         m_fontCombo = new QFontComboBox();
         m_fontCombo->setCurrentFont(QFont(settings.value("font/family",
             QApplication::font().family()).toString()));
@@ -74,6 +77,9 @@ public:
         layout->addSpacing(12);
         layout->addWidget(new QLabel("Queue Button:"));
         layout->addWidget(m_showQueue);
+        layout->addSpacing(12);
+        layout->addWidget(new QLabel("Ambient Mode:"));
+        layout->addWidget(m_ambientMode);
         layout->addSpacing(12);
         layout->addWidget(new QLabel("Playback:"));
         layout->addWidget(m_gapless);
@@ -104,6 +110,7 @@ public:
         }
     }
     bool showQueue() const { return m_showQueue->isChecked(); }
+    bool ambientMode() const { return m_ambientMode->isChecked(); }
 
 private:
     QCheckBox *m_checkBox = nullptr;
@@ -114,5 +121,6 @@ private:
     QCheckBox *m_gapless = nullptr;
     QComboBox *m_replaygain = nullptr;
     QCheckBox *m_showQueue = nullptr;
+    QCheckBox *m_ambientMode = nullptr;
 };
 

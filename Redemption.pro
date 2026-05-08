@@ -25,7 +25,8 @@ HEADERS += \
     mprisplayer.h \
     toastnotification.h \
     metadatadialog.h \
-    scrollinglabel.h
+    scrollinglabel.h \
+    ambientbar.h
 
 # mpv
 LIBS += -lmpv

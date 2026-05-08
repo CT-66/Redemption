@@ -12,6 +12,7 @@
 #include <QPainter>
 #include <QtConcurrent>
 #include <QHoverEvent>
+#include <QPainterPath>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -158,13 +159,20 @@ void MainWindow::setupUi()
     m_coverLabel = new QLabel();
     m_coverLabel->setFixedSize(150, 150);
     m_coverLabel->setAlignment(Qt::AlignCenter);
-    m_coverLabel->setStyleSheet(
-        "background: palette(mid);"
-        "border-radius: 4px;"
-    );
+    // m_coverLabel->setStyleSheet(
+    //     "background: palette(mid);"
+    //     "border-radius: 4px;"
+    // );
+    m_coverLabel->setStyleSheet("background: transparent");
 
     m_coverLabel->setCursor(Qt::PointingHandCursor);
     m_coverLabel->installEventFilter(this);
+
+    QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(this);
+    shadow->setBlurRadius(20);
+    shadow->setOffset(0, 4);
+    shadow->setColor(QColor(0, 0, 0, 160));
+    m_coverLabel->setGraphicsEffect(shadow);
 
     // --- title and artist ---
     // m_titleLabel = new QLabel("No track playing");
@@ -481,6 +489,7 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
     bottomLayout->addSpacing(12);
     bottomLayout->addLayout(rightSection, 1);
 
+    /*
     QWidget *bottomBar = new QWidget();
     bottomBar->setFixedHeight(175);
     bottomBar->setObjectName("bottomBar");
@@ -488,13 +497,19 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
         "#bottomBar { border-top: 1px solid palette(mid); }"
     );
     bottomBar->setLayout(bottomLayout);
+    */
+    m_ambientBar = new AmbientBar();
+    m_ambientBar->setFixedHeight(175);
+    m_ambientBar->setObjectName("bottomBar");
+    m_ambientBar->setLayout(bottomLayout);
 
     // --- main layout ---
     QVBoxLayout *mainLayout = new QVBoxLayout();
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
     mainLayout->addWidget(m_treeView, 1);
-    mainLayout->addWidget(bottomBar);
+    // mainLayout->addWidget(bottomBar);
+    mainLayout->addWidget(m_ambientBar);
 
     QWidget *central = new QWidget();
     central->setLayout(mainLayout);
@@ -618,10 +633,36 @@ void MainWindow::updateNowPlaying(const QString &filePath)
     if (filePath.isEmpty()) {
         m_titleLabel->setText("No track playing");
         m_artistLabel->setText("");
-        QIcon fallback = QIcon::fromTheme("media-album-cover");
-        m_coverLabel->setPixmap(fallback.pixmap(m_coverLabel->size()));
-        m_coverLabel->setStyleSheet("background: palette(mid); border-radius: 4px;");
-        return;
+        /*
+        QPixmap fallback = QIcon::fromTheme("media-album-cover").pixmap(m_coverLabel->size());
+        // QPixmap fallback = QIcon::fromTheme("media-album-cover").pixmap(QSize(150, 150));
+        // m_coverLabel->setPixmap(fallback.pixmap(m_coverLabel->size()));
+        // m_coverLabel->setStyleSheet("background: palette(mid); border-radius: 4px;");
+         m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
+        m_coverLabel->setStyleSheet("background: transparent;");
+        m_ambientBar->updateFromCover(QPixmap());
+        */
+
+        // QPixmap fallback(150, 150);
+        // fallback.fill(Qt::transparent);
+        // QPainter painter(&fallback);
+        // QIcon::fromTheme("media-album-cover").paint(&painter, 0, 0, 150, 150);
+        // painter.end();
+        // m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
+        // return;
+                QPixmap fallback(150, 150);
+        fallback.fill(Qt::transparent);
+        QPainter painter(&fallback);
+        painter.setRenderHint(QPainter::Antialiasing);
+        // draw rounded background
+        painter.setBrush(palette().mid());
+        painter.setPen(Qt::NoPen);
+        painter.drawRoundedRect(0, 0, 150, 150, 12, 12);
+        // draw icon centered
+        QIcon::fromTheme("media-album-cover").paint(&painter, 25, 25, 100, 100);
+        painter.end();
+        m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
+        m_ambientBar->updateFromCover(QPixmap());
     }
 
     TrackMetadata meta = MetadataReader::read(filePath);
@@ -643,15 +684,51 @@ void MainWindow::updateNowPlaying(const QString &filePath)
             Qt::KeepAspectRatio,
             Qt::SmoothTransformation
         );
-        m_coverLabel->setPixmap(scaled);
+        // m_coverLabel->setPixmap(scaled);
+        m_coverLabel->setPixmap(roundedPixmap(scaled, 12));
+        m_ambientBar->updateFromCover(meta.cover);
+    // } else {
+    //     m_currentCover = QPixmap();
+    //     QIcon fallback = QIcon::fromTheme("media-album-cover");
+    //     if (fallback.isNull())
+    //         fallback = QIcon::fromTheme("audio-x-generic");
+    //     m_coverLabel->setPixmap(fallback.pixmap(m_coverLabel->size()));
+    //     m_coverLabel->setStyleSheet("background: palette(mid); border-radius: 4px;");
+    //     m_ambientBar->updateFromCover(QPixmap());
+    // }
+    // } else {
+    //     QPixmap fallback = QIcon::fromTheme("media-album-cover")
+    //         .pixmap(m_coverLabel->size());
+    //     if (fallback.isNull())
+    //         fallback = QIcon::fromTheme("audio-x-generic")
+    //             .pixmap(m_coverLabel->size());
+    //     m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
+    //     m_ambientBar->updateFromCover(QPixmap());
+    // }
     } else {
-        m_currentCover = QPixmap();
-        QIcon fallback = QIcon::fromTheme("media-album-cover");
-        if (fallback.isNull())
-            fallback = QIcon::fromTheme("audio-x-generic");
-        m_coverLabel->setPixmap(fallback.pixmap(m_coverLabel->size()));
-        m_coverLabel->setStyleSheet("background: palette(mid); border-radius: 4px;");
+        // m_currentCover = QPixmap();
+        // QPixmap fallback(150, 150);
+        // fallback.fill(Qt::transparent);
+        // QPainter painter(&fallback);
+        // QIcon::fromTheme("media-album-cover").paint(&painter, 0, 0, 150, 150);
+        // painter.end();
+        // m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
+        // m_ambientBar->updateFromCover(QPixmap());
+        QPixmap fallback(150, 150);
+        fallback.fill(Qt::transparent);
+        QPainter painter(&fallback);
+        painter.setRenderHint(QPainter::Antialiasing);
+        // draw rounded background
+        painter.setBrush(palette().mid());
+        painter.setPen(Qt::NoPen);
+        painter.drawRoundedRect(0, 0, 150, 150, 12, 12);
+        // draw icon centered
+        QIcon::fromTheme("media-album-cover").paint(&painter, 25, 25, 100, 100);
+        painter.end();
+        m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
+        m_ambientBar->updateFromCover(QPixmap());
     }
+
 }
 
 void MainWindow::onPlayPauseClicked()
@@ -955,6 +1032,9 @@ void MainWindow::applySettings()
     bool showQueue = settings.value("ui/showQueue", true).toBool();
     m_queueButton->setVisible(showQueue);
 
+    bool ambient = settings.value("ui/ambientMode", true).toBool();
+    m_ambientBar->setAmbientEnabled(ambient);
+
     QFont font = QFont(settings.value("font/family",
     QApplication::font().family()).toString());
     font.setPointSize(settings.value("font/size",
@@ -974,6 +1054,7 @@ void MainWindow::onSettingsClicked()
         settings.setValue("playback/gapless", dialog.gapless());
         settings.setValue("playback/replaygain", dialog.replaygain());
         settings.setValue("ui/showQueue", dialog.showQueue());
+        settings.setValue("ui/ambientMode", dialog.ambientMode());
         settings.setValue("font/family", dialog.selectedFont().family());
         settings.setValue("font/size", dialog.selectedFontSize());
         applySettings();
@@ -1745,4 +1826,18 @@ void MainWindow::onQueueClicked()
     QVBoxLayout *layout = new QVBoxLayout(&dialog);
     layout->addWidget(list);
     dialog.exec();
+}
+
+
+QPixmap MainWindow::roundedPixmap(const QPixmap &src, int radius)
+{
+    QPixmap result(src.size());
+    result.fill(Qt::transparent);
+    QPainter p(&result);
+    p.setRenderHint(QPainter::Antialiasing);
+    QPainterPath path;
+    path.addRoundedRect(result.rect(), radius, radius);
+    p.setClipPath(path);
+    p.drawPixmap(0, 0, src);
+    return result;
 }
