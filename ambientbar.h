@@ -1,18 +1,19 @@
 #pragma once
 
-#include <QPainter>
-#include <QRadialGradient>
-#include <QLinearGradient>
-#include <QResizeEvent>
 #include <QWidget>
 #include <QImage>
 #include <QColor>
 #include <QPixmap>
+#include <QTimer>
+#include <QPainter>
+#include <QLinearGradient>
+#include <QRadialGradient>
+#include <QResizeEvent>
+#include <QtConcurrent>
+#include <QFutureWatcher>
 #include <vector>
 #include <cstring>
-#include <QTimer>
 
-// Separable box blur implementation (pure Qt, no deps)
 static void blurH(float *buf, int w, int h, int r)
 {
     const float inv = 1.0f / float(r * 2 + 1);
@@ -103,66 +104,150 @@ public:
         : QWidget(parent)
     {
         setAttribute(Qt::WA_StyledBackground, false);
+        m_watcher = new QFutureWatcher<QPair<QImage, QColor>>(this);
+        connect(m_watcher, &QFutureWatcher<QPair<QImage, QColor>>::finished,
+                this, &AmbientBar::onBlurFinished);
     }
 
     void updateFromCover(const QPixmap &cover)
     {
-
         if (m_fadeTimer) {
             m_fadeTimer->stop();
             m_fadeTimer->deleteLater();
             m_fadeTimer = nullptr;
         }
 
-        m_previousImage = m_blurredImage;
-        m_fadeOpacity = 0.0;
-
         if (cover.isNull()) {
+            m_previousImage = m_blurredImage;
+            m_previousDominant = m_dominant;
             m_blurredImage = QImage();
             m_dominant = QColor(30, 30, 40);
-            update();
+            startFade();
             return;
         }
 
+        m_previousImage = m_blurredImage;
+        m_previousDominant = m_dominant;
+        m_fadeOpacity = 0.0f;
+
         const QImage src = cover.toImage().convertToFormat(QImage::Format_RGB32);
+        const int targetW = width() > 0 ? width() : 900;
+        const int targetH = height() > 0 ? height() : 175;
 
-        // build blurred background
-        const QImage half = src.scaled(
-            src.width() / 2, src.height() / 2,
-            Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-        const QImage blurred = separableGaussianBlur(half, 30);
-        m_blurredImage = blurred.scaled(
-            width() > 0 ? width() : 900,
-            height() > 0 ? height() : 175,
-            Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        auto future = QtConcurrent::run([src, targetW, targetH]() {
+            const QImage half = src.scaled(
+                src.width() / 2, src.height() / 2,
+                Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            const QImage blurred = separableGaussianBlur(half, 30);
+            QImage result = blurred.scaled(
+                targetW, targetH,
+                Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 
-        // extract dominant color
-        const int w = src.width(), h = src.height();
-        constexpr int samples = 16;
-        const int stepX = qMax(1, w / samples);
-        const int stepY = qMax(1, h / samples);
-        qint64 rSum = 0, gSum = 0, bSum = 0, count = 0;
-        for (int y = 0; y < h; y += stepY) {
-            const auto *line = reinterpret_cast<const QRgb*>(src.constScanLine(y));
-            for (int x = 0; x < w; x += stepX) {
-                rSum += qRed(line[x]);
-                gSum += qGreen(line[x]);
-                bSum += qBlue(line[x]);
-                ++count;
+            // dominant color — original "cheesy" values
+            const int w = src.width(), h = src.height();
+            constexpr int samples = 16;
+            const int stepX = qMax(1, w / samples);
+            const int stepY = qMax(1, h / samples);
+            qint64 rSum = 0, gSum = 0, bSum = 0, count = 0;
+            for (int y = 0; y < h; y += stepY) {
+                const auto *line = reinterpret_cast<const QRgb*>(src.constScanLine(y));
+                for (int x = 0; x < w; x += stepX) {
+                    rSum += qRed(line[x]);
+                    gSum += qGreen(line[x]);
+                    bSum += qBlue(line[x]);
+                    ++count;
+                }
             }
-        }
-        QColor avg(int(rSum/count), int(gSum/count), int(bSum/count));
-        QColor hsv = avg.toHsv();
-        int s = qMin(255, int(hsv.saturation() * 2.2));
-        int v = qMin(255, int(hsv.value() * 0.75));
-        hsv.setHsv(hsv.hsvHue(), s, v);
-        m_dominant = hsv;
+            QColor avg(int(rSum/count), int(gSum/count), int(bSum/count));
+            QColor hsv = avg.toHsv();
+            int s = qMin(255, int(hsv.saturation() * 2.2));
+            int v = qMin(255, int(hsv.value() * 0.75));
+            hsv.setHsv(hsv.hsvHue(), s, v);
 
-    if (!m_previousImage.isNull()) {
+            return QPair<QImage, QColor>(result, hsv);
+        });
+
+        m_watcher->setFuture(future);
+    }
+
+    void setAmbientEnabled(bool enabled)
+    {
+        m_enabled = enabled;
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter p(this);
+        p.setRenderHint(QPainter::SmoothPixmapTransform);
+        const QRectF r = rect();
+
+        if (!m_enabled) {
+            p.fillRect(r, palette().window().color());
+            return;
+        }
+
+        if (m_blurredImage.isNull() && m_previousImage.isNull()) {
+            p.fillRect(r, palette().window().color());
+            return;
+        }
+
+        // previous fading out
+        if (!m_previousImage.isNull() && m_fadeOpacity < 1.0f) {
+            p.setOpacity(1.0f - m_fadeOpacity);
+            p.drawImage(r, m_previousImage);
+            p.fillRect(r, QColor(0, 0, 0, 110));
+            drawGlows(p, r, m_previousDominant);
+        }
+
+        // current fading in
+        if (!m_blurredImage.isNull()) {
+            p.setOpacity(m_fadeOpacity);
+            p.drawImage(r, m_blurredImage);
+            p.fillRect(r, QColor(0, 0, 0, 110));
+            drawGlows(p, r, m_dominant);
+        }
+
+        p.setOpacity(1.0f);
+    }
+
+    void resizeEvent(QResizeEvent *e) override
+    {
+        QWidget::resizeEvent(e);
+        if (!m_blurredImage.isNull())
+            m_blurredImage = m_blurredImage.scaled(
+                width(), height(),
+                Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    }
+
+private slots:
+    void onBlurFinished()
+    {
+        auto result = m_watcher->result();
+        m_blurredImage = result.first;
+        m_previousDominant = m_dominant;
+        m_dominant = result.second;
+        startFade();
+    }
+
+private:
+    QImage m_blurredImage;
+    QImage m_previousImage;
+    QColor m_dominant{30, 30, 40};
+    QColor m_previousDominant{30, 30, 40};
+    float m_fadeOpacity = 1.0f;
+    bool m_enabled = true;
+    QTimer *m_fadeTimer = nullptr;
+    QFutureWatcher<QPair<QImage, QColor>> *m_watcher = nullptr;
+
+    void startFade()
+    {
+        m_fadeOpacity = 0.0f;
         m_fadeTimer = new QTimer(this);
-        m_fadeTimer->setInterval(16); // ~60fps
+        m_fadeTimer->setInterval(16);
         connect(m_fadeTimer, &QTimer::timeout, this, [this]() {
-            m_fadeOpacity += 0.05f;
+            m_fadeOpacity += 0.04f;
             if (m_fadeOpacity >= 1.0f) {
                 m_fadeOpacity = 1.0f;
                 m_fadeTimer->stop();
@@ -173,112 +258,25 @@ public:
             update();
         });
         m_fadeTimer->start();
-        } else {
-            m_fadeOpacity = 1.0f;
-            update();
-        }
-
-    }
-    void setAmbientEnabled(bool enabled) {
-        m_enabled = enabled;
-        update();
     }
 
-protected:
-    void paintEvent(QPaintEvent *) override
+    void drawGlows(QPainter &p, const QRectF &r, const QColor &dominant)
     {
+        // primary glow — upper right
+        QColor gc = dominant;
+        gc.setAlpha(160);
+        QColor tr = gc; tr.setAlpha(0);
+        QRadialGradient glow(r.width() * 0.72, r.height() * 0.22, r.width() * 0.65);
+        glow.setColorAt(0.0, gc);
+        glow.setColorAt(1.0, tr);
+        p.fillRect(r, glow);
 
-        QPainter p(this);
-        p.setRenderHint(QPainter::SmoothPixmapTransform);
-        const QRectF r = rect();
-
-        // if (m_blurredImage.isNull()) {
-        //     // fallback — dark gradient
-        //     QLinearGradient grad(0, 0, 0, r.height());
-        //     grad.setColorAt(0.0, QColor(30, 30, 40));
-        //     grad.setColorAt(1.0, QColor(20, 20, 30));
-        //     p.fillRect(r, grad);
-        // } else {
-        if (!m_enabled) {
-            p.fillRect(r, palette().window().color());
-            return;
-        }
-        if (m_blurredImage.isNull()) {
-            p.fillRect(r, palette().window().color());
-            return;
-        } else {
-
-    if (!m_previousImage.isNull() && m_fadeOpacity < 1.0) {
-    // draw previous
-    p.setOpacity(1.0 - m_fadeOpacity);
-    p.drawImage(r, m_previousImage);
-    p.setOpacity(1.0);
-}
-
-// draw current with fade in
-p.setOpacity(m_fadeOpacity);
-p.drawImage(r, m_blurredImage);
-p.setOpacity(1.0);
-
-// overlays at full opacity
-p.fillRect(r, QColor(0, 0, 0, 180));
-// ... rest of glows etc
-
-            // blurred cover fills bar
-            p.drawImage(r, m_blurredImage);
-
-            // dark tint
-            p.fillRect(r, QColor(0, 0, 0, 140));
-
-            // dominant color radial glow — upper right
-            {
-                QColor gc = m_dominant;
-                gc.setAlpha(120);
-                QColor tr = gc; tr.setAlpha(0);
-                QRadialGradient glow(r.width() * 0.75, 0, r.width() * 0.6);
-                glow.setColorAt(0.0, gc);
-                glow.setColorAt(1.0, tr);
-                p.fillRect(r, glow);
-            }
-
-            // secondary glow — lower left
-            {
-                QColor gc = m_dominant;
-                gc.setAlpha(60);
-                QColor tr = gc; tr.setAlpha(0);
-                QRadialGradient glow2(r.width() * 0.1, r.height(), r.width() * 0.4);
-                glow2.setColorAt(0.0, gc);
-                glow2.setColorAt(1.0, tr);
-                p.fillRect(r, glow2);
-            }
-
-            // top border fade
-            {
-                QLinearGradient vt(0, 0, 0, 20);
-                vt.setColorAt(0.0, QColor(0, 0, 0, 60));
-                vt.setColorAt(1.0, QColor(0, 0, 0, 0));
-                p.fillRect(r, vt);
-            }
-        }
+        // secondary glow — lower left
+        gc.setAlpha(80);
+        tr.setAlpha(0);
+        QRadialGradient glow2(r.width() * 0.15, r.height() * 0.85, r.width() * 0.5);
+        glow2.setColorAt(0.0, gc);
+        glow2.setColorAt(1.0, tr);
+        p.fillRect(r, glow2);
     }
-
-    void resizeEvent(QResizeEvent *e) override
-    {
-        QWidget::resizeEvent(e);
-        // rescale blurred image to new size if available
-        if (!m_blurredImage.isNull())
-            m_blurredImage = m_blurredImage.scaled(
-                width(), height(),
-                Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    }
-
-private:
-    QImage m_blurredImage;
-    QColor m_dominant{30, 30, 40};
-    bool m_enabled = true;
-    QImage m_previousImage;
-    qreal m_fadeOpacity = 1.0;
-    QTimer *m_fadeTimer = nullptr;
 };
-
-
