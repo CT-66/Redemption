@@ -335,6 +335,7 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
         menu.addAction("Loop track", this, [this]() {
             m_engine->setShuffleMode(ShuffleMode::Off);
             m_engine->setLoopMode(LoopMode::Track);
+                m_engine->setLoopTargetPath(m_engine->currentTrack());
             updateLoopIcon();
             updateShuffleIcon();
             updateButtonStates();
@@ -345,6 +346,7 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
         menu.addAction("Loop directory", this, [this]() {
             m_engine->setShuffleMode(ShuffleMode::Off);
             m_engine->setLoopMode(LoopMode::Directory);
+                m_engine->setLoopTargetPath(m_engine->currentDirPath());
             updateLoopIcon();
             updateShuffleIcon();
             updateButtonStates();
@@ -383,6 +385,7 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
         menu.addAction("Shuffle directory", this, [this]() {
             m_engine->setLoopMode(LoopMode::None);
             m_engine->setShuffleMode(ShuffleMode::Directory);
+                m_engine->setShuffleTargetPath(m_engine->currentDirPath());
             QStringList fullQueue = m_model->collectAudioFiles(
                 QDir::homePath() + "/Music");
             QString current = m_engine->currentTrack();
@@ -583,6 +586,7 @@ void MainWindow::onTreeItemActivated(const QModelIndex &index)
 
 void MainWindow::onTrackChanged(const QString &filePath)
 {
+    m_engine->setCurrentDirPath(QFileInfo(filePath).absolutePath());
 
     setControlsEnabled(true);
     updateNowPlaying(filePath);
@@ -1138,14 +1142,12 @@ void MainWindow::updateShuffleIcon()
     m_shuffleButton->setToolTip(tooltip);
 }
 
-
 void MainWindow::onLoopClicked()
 {
-    // cycle through loop states
     switch (m_engine->loopMode()) {
     case LoopMode::None:
         m_engine->setLoopMode(LoopMode::Track);
-        // disable shuffle if active
+        m_engine->setLoopTargetPath(m_engine->currentTrack());
         if (m_engine->shuffleMode() != ShuffleMode::Off) {
             m_engine->setShuffleMode(ShuffleMode::Off);
             m_engine->restoreQueue();
@@ -1156,33 +1158,33 @@ void MainWindow::onLoopClicked()
         break;
     case LoopMode::Track:
         m_engine->setLoopMode(LoopMode::Directory);
+        m_engine->setLoopTargetPath(m_engine->currentDirPath());
         ToastNotification::show(this, "Looping directory", "media-playlist-repeat");
         break;
     case LoopMode::Directory:
         m_engine->setLoopMode(LoopMode::Queue);
+        m_engine->setLoopTargetPath("");
         m_engine->restoreQueue();
         ToastNotification::show(this, "Looping queue", "media-playlist-repeat");
         break;
     case LoopMode::DirectoryRecursive:
-        // only reachable from context menu
         m_engine->setLoopMode(LoopMode::Queue);
+        m_engine->setLoopTargetPath("");
         m_engine->restoreQueue();
         ToastNotification::show(this, "Looping queue", "media-playlist-repeat");
         break;
     case LoopMode::Queue:
         m_engine->setLoopMode(LoopMode::None);
+        m_engine->setLoopTargetPath("");
         ToastNotification::show(this, "Loop off", "media-playlist-repeat");
         break;
     }
+
     updateLoopIcon();
-
-    m_engine->setLoopTargetPath(m_engine->currentDirPath());
-
     m_model->setLoopState((int)m_engine->loopMode(),
         m_engine->loopMode() == LoopMode::Track
             ? m_engine->currentTrack()
-            : m_engine->currentDirPath());
-
+            : m_engine->loopTargetPath());
     m_treeView->viewport()->update();
     updateButtonStates();
 }
@@ -1190,26 +1192,15 @@ void MainWindow::onLoopClicked()
 void MainWindow::onShuffleClicked()
 {
     switch (m_engine->shuffleMode()) {
-    // case ShuffleMode::Off:
-    //     // disable loop if active
-    //     if (m_engine->loopMode() != LoopMode::None) {
-    //         m_engine->setLoopMode(LoopMode::None);
-    //         updateLoopIcon();
-    //         ToastNotification::show(this, "Loop disabled", "media-playlist-repeat");
-    //     }
-    //     m_engine->setShuffleMode(ShuffleMode::Directory);
-    //     m_engine->playFrom(m_engine->currentTrack().isEmpty() ? QStringList() :
-    //         QStringList(), 0);
-    //     ToastNotification::show(this, "Shuffling directory", "media-playlist-shuffle");
-    //     break;
     case ShuffleMode::Off:
         if (m_engine->loopMode() != LoopMode::None) {
             m_engine->setLoopMode(LoopMode::None);
+            m_engine->setLoopTargetPath("");
             updateLoopIcon();
             ToastNotification::show(this, "Loop disabled", "media-playlist-repeat");
         }
         m_engine->setShuffleMode(ShuffleMode::Directory);
-        // build shuffle from current dir using existing original queue
+        m_engine->setShuffleTargetPath(m_engine->currentDirPath());
         {
             QStringList fullQueue = m_model->collectAudioFiles(
                 QDir::homePath() + "/Music");
@@ -1219,12 +1210,9 @@ void MainWindow::onShuffleClicked()
         }
         ToastNotification::show(this, "Shuffling directory", "media-playlist-shuffle");
         break;
-    // case ShuffleMode::Directory:
-    //     m_engine->setShuffleMode(ShuffleMode::All);
-    //     ToastNotification::show(this, "Shuffling all", "media-playlist-shuffle");
-    //     break;
     case ShuffleMode::Directory:
         m_engine->setShuffleMode(ShuffleMode::All);
+        m_engine->setShuffleTargetPath("");
         {
             QStringList fullQueue = m_model->collectAudioFiles(
                 QDir::homePath() + "/Music");
@@ -1236,17 +1224,15 @@ void MainWindow::onShuffleClicked()
         break;
     case ShuffleMode::All:
         m_engine->setShuffleMode(ShuffleMode::Off);
+        m_engine->setShuffleTargetPath("");
         m_engine->restoreQueue();
         ToastNotification::show(this, "Shuffle off", "media-playlist-shuffle");
         break;
     }
+
     updateShuffleIcon();
-
-    m_engine->setShuffleTargetPath(m_engine->currentDirPath());
-
     m_model->setShuffleState((int)m_engine->shuffleMode(),
-        m_engine->currentDirPath());
-
+        m_engine->shuffleTargetPath());
     m_treeView->viewport()->update();
     updateButtonStates();
 }
