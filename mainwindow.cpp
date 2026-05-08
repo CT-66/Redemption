@@ -667,6 +667,7 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         painter.end();
         m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
         m_ambientBar->updateFromCover(QPixmap());
+        return;
     }
 
     TrackMetadata meta = MetadataReader::read(filePath);
@@ -710,7 +711,7 @@ void MainWindow::updateNowPlaying(const QString &filePath)
     //     m_ambientBar->updateFromCover(QPixmap());
     // }
     } else {
-        // m_currentCover = QPixmap();
+        m_currentCover = QPixmap();
         // QPixmap fallback(150, 150);
         // fallback.fill(Qt::transparent);
         // QPainter painter(&fallback);
@@ -791,7 +792,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
 
     if (event->type() == QEvent::MouseButtonPress && obj == m_coverLabel) {
-        onCoverClicked();
+        if (!m_currentCover.isNull())
+            onCoverClicked();
         return true;
     }
 
