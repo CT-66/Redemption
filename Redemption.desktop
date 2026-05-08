@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Redemption
+GenericName=Music Player
+Comment=Recursive Directory Music Player
+Exec=Redemption
+Icon=redemption
+Type=Application
+Categories=Audio;AudioVideo;Music;Player;
+Keywords=music;player;audio;rdmp
