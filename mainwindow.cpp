@@ -446,6 +446,16 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
     m_queueButton->setToolTip("View queue");
     connect(m_queueButton, &QToolButton::clicked, this, &MainWindow::onQueueClicked);
 
+    // -- view toggle  --
+    m_viewToggleButton = new QToolButton();
+    m_viewToggleButton->setFixedSize(44, 44);
+    m_viewToggleButton->setIconSize(QSize(22, 22));
+    m_viewToggleButton->setAutoRaise(true);
+    m_viewToggleButton->setIcon(QIcon::fromTheme("view-fullscreen"));
+    m_viewToggleButton->setToolTip("Toggle playlist view");
+    connect(m_viewToggleButton, &QToolButton::clicked,
+            this, &MainWindow::onViewToggled);
+
     // --- right section: title/artist + seekbar + buttons ---
     QHBoxLayout *seekRowLayout = new QHBoxLayout();
     seekRowLayout->addWidget(m_elapsedLabel);
@@ -457,6 +467,7 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
     // btnLayout->addWidget(m_searchButton);
     btnLayout->addWidget(m_cavaButton);
     btnLayout->addWidget(m_queueButton);
+    btnLayout->addWidget(m_viewToggleButton);
     btnLayout->addStretch();
     btnLayout->addWidget(m_loopButton);
     btnLayout->addWidget(m_prevButton);
@@ -514,8 +525,56 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
     // mainLayout->addWidget(bottomBar);
     mainLayout->addWidget(m_ambientBar);
 
+    // playlist mode widget (hidden by default)
+    m_playlistView = new PlaylistView();
+    m_nowPlayingPanel = new NowPlayingPanel();
+
+    // give nowplaying panel the ambient background
+    m_nowPlayingPanel->setAutoFillBackground(false);
+
+    m_nowPlayingAmbient = new AmbientBar(m_nowPlayingPanel);
+    m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+    m_nowPlayingAmbient->lower(); // behind everything
+    m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+    m_nowPlayingAmbient->updateFromCover(m_currentCover);
+
+
     QWidget *central = new QWidget();
     central->setLayout(mainLayout);
+
+        m_playlistModeWidget = new QWidget(central);
+    m_playlistModeWidget->setObjectName("playlistModeWidget");
+    QHBoxLayout *playlistLayout = new QHBoxLayout(m_playlistModeWidget);
+    playlistLayout->setContentsMargins(0, 0, 0, 0);
+    playlistLayout->setSpacing(0);
+    playlistLayout->addWidget(m_playlistView, 35);
+    playlistLayout->addWidget(m_nowPlayingPanel, 65);
+
+// m_playlistEffect = new QGraphicsOpacityEffect(m_playlistModeWidget);
+// m_playlistEffect->setOpacity(0.0);
+// m_playlistModeWidget->setGraphicsEffect(m_playlistEffect);
+
+    m_fadeOverlay = new QWidget(this);
+    m_fadeOverlay->setStyleSheet("background: palette(window);");
+    m_fadeOverlay->hide();
+
+    m_playlistModeWidget->hide();
+    m_playlistModeWidget->setGeometry(central->rect());
+
+
+    // connect playlist view signals
+    connect(m_playlistView->switchButton(), &QToolButton::clicked,
+            this, &MainWindow::onViewToggled);
+    connect(m_playlistView->searchButton(), &QToolButton::clicked,
+            this, &MainWindow::onSearchClicked);
+    connect(m_playlistView->listWidget(), &QListWidget::itemActivated,
+            this, [this](QListWidgetItem *item) {
+        QString path = item->data(Qt::UserRole).toString();
+        if (!path.isEmpty())
+            playFromPath(path);
+    });
+
+
     setCentralWidget(central);
 
     updateNowPlaying("");
@@ -630,6 +689,20 @@ void MainWindow::onTrackChanged(const QString &filePath)
     m_engine->clearManualChange();
 
     m_treeView->viewport()->update();
+
+    // playlist mode stuff
+    if (m_playlistMode) {
+        QString newDir = QFileInfo(filePath).absolutePath();
+        if (newDir != m_engine->currentDirPath())
+            refreshPlaylistView(newDir);
+        else
+            m_playlistView->updateCurrentTrack(filePath);
+
+        m_nowPlayingPanel->setTitle(m_titleLabel->text());
+        m_nowPlayingPanel->setArtist(m_artistLabel->text());
+        m_nowPlayingPanel->setCover(m_currentCover);
+        m_nowPlayingAmbient->updateFromCover(m_currentCover);
+    }
 }
 
 void MainWindow::updateNowPlaying(const QString &filePath)
@@ -1828,4 +1901,176 @@ QPixmap MainWindow::roundedPixmap(const QPixmap &src, int radius)
     p.setClipPath(path);
     p.drawPixmap(0, 0, src);
     return result;
+}
+
+/*
+void MainWindow::onViewToggled()
+{
+    m_playlistMode = !m_playlistMode;
+
+    if (m_playlistMode) {
+        // refresh playlist with current directory
+        refreshPlaylistView(m_engine->currentDirPath());
+
+        // sync now playing panel
+        m_nowPlayingPanel->setTitle(m_titleLabel->text());
+        m_nowPlayingPanel->setArtist(m_artistLabel->text());
+        m_nowPlayingPanel->setCover(m_currentCover);
+
+        // animate: tree+bottombar out, playlist mode in
+        m_playlistModeWidget->setGeometry(centralWidget()->rect());
+        m_playlistModeWidget->show();
+        m_playlistModeWidget->raise();
+
+        // QPropertyAnimation *fadeIn = new QPropertyAnimation(m_playlistModeWidget, "windowOpacity");
+        // use graphics effect for opacity since it's not a window
+        QGraphicsOpacityEffect *effect = new QGraphicsOpacityEffect(m_playlistModeWidget);
+        m_playlistModeWidget->setGraphicsEffect(effect);
+        effect->setOpacity(0.0);
+
+        QPropertyAnimation *anim = new QPropertyAnimation(effect, "opacity");
+        anim->setDuration(300);
+        anim->setStartValue(0.0);
+        anim->setEndValue(1.0);
+        anim->setEasingCurve(QEasingCurve::InOutQuad);
+        anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        m_viewToggleButton->setIcon(QIcon::fromTheme("view-list-tree"));
+    } else {
+        // animate out
+        QGraphicsOpacityEffect *effect =
+            qobject_cast<QGraphicsOpacityEffect*>(m_playlistModeWidget->graphicsEffect());
+        if (effect) {
+            QPropertyAnimation *anim = new QPropertyAnimation(effect, "opacity");
+            anim->setDuration(300);
+            anim->setStartValue(1.0);
+            anim->setEndValue(0.0);
+            anim->setEasingCurve(QEasingCurve::InOutQuad);
+            connect(anim, &QPropertyAnimation::finished, this, [this]() {
+                m_playlistModeWidget->hide();
+                m_playlistModeWidget->setGraphicsEffect(nullptr);
+            });
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+        } else {
+            m_playlistModeWidget->hide();
+        }
+
+        m_viewToggleButton->setIcon(QIcon::fromTheme("view-fullscreen"));
+    }
+}
+*/
+void MainWindow::onViewToggled()
+{
+    m_playlistMode = !m_playlistMode;
+
+    /*
+    if (m_playlistMode) {
+        refreshPlaylistView(m_engine->currentDirPath());
+        m_nowPlayingPanel->setTitle(m_titleLabel->text());
+        m_nowPlayingPanel->setArtist(m_artistLabel->text());
+        m_nowPlayingPanel->setCover(m_currentCover);
+        m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+        m_nowPlayingAmbient->updateFromCover(m_currentCover);
+
+        m_playlistModeWidget->setGeometry(centralWidget()->rect());
+        m_playlistEffect->setOpacity(0.0);
+        m_playlistModeWidget->show();
+        m_playlistModeWidget->raise();
+
+        QPropertyAnimation *anim = new QPropertyAnimation(m_playlistEffect, "opacity");
+        anim->setDuration(300);
+        anim->setStartValue(0.0);
+        anim->setEndValue(1.0);
+        anim->setEasingCurve(QEasingCurve::InOutQuad);
+        anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        m_viewToggleButton->setIcon(QIcon::fromTheme("view-list-tree"));
+    } else {
+        QPropertyAnimation *anim = new QPropertyAnimation(m_playlistEffect, "opacity");
+        anim->setDuration(300);
+        anim->setStartValue(1.0);
+        anim->setEndValue(0.0);
+        anim->setEasingCurve(QEasingCurve::InOutQuad);
+        connect(anim, &QPropertyAnimation::finished, this, [this]() {
+            m_playlistModeWidget->hide();
+        });
+        anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        m_viewToggleButton->setIcon(QIcon::fromTheme("view-fullscreen"));
+    }
+    */
+   if (m_playlistMode) {
+        refreshPlaylistView(m_engine->currentDirPath());
+        m_nowPlayingPanel->setTitle(m_titleLabel->text());
+        m_nowPlayingPanel->setArtist(m_artistLabel->text());
+        m_nowPlayingPanel->setCover(m_currentCover);
+        m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+        m_nowPlayingAmbient->updateFromCover(m_currentCover);
+
+        m_playlistModeWidget->setGeometry(centralWidget()->rect());
+        m_playlistModeWidget->show();
+        m_playlistModeWidget->raise();
+
+        // fade overlay on top, then hide it
+        m_fadeOverlay->setGeometry(centralWidget()->rect());
+        m_fadeOverlay->show();
+        m_fadeOverlay->raise();
+
+        QGraphicsOpacityEffect *effect = new QGraphicsOpacityEffect(m_fadeOverlay);
+        m_fadeOverlay->setGraphicsEffect(effect);
+        effect->setOpacity(1.0);
+
+        QPropertyAnimation *anim = new QPropertyAnimation(effect, "opacity");
+        anim->setDuration(300);
+        anim->setStartValue(1.0);
+        anim->setEndValue(0.0);
+        anim->setEasingCurve(QEasingCurve::InOutQuad);
+        connect(anim, &QPropertyAnimation::finished, this, [this]() {
+            m_fadeOverlay->hide();
+            m_fadeOverlay->setGraphicsEffect(nullptr);
+        });
+        anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        m_viewToggleButton->setIcon(QIcon::fromTheme("view-list-tree"));
+    } else {
+        m_fadeOverlay->setGeometry(centralWidget()->rect());
+        m_fadeOverlay->show();
+        m_fadeOverlay->raise();
+
+        QGraphicsOpacityEffect *effect = new QGraphicsOpacityEffect(m_fadeOverlay);
+        m_fadeOverlay->setGraphicsEffect(effect);
+        effect->setOpacity(0.0);
+
+        QPropertyAnimation *anim = new QPropertyAnimation(effect, "opacity");
+        anim->setDuration(300);
+        anim->setStartValue(0.0);
+        anim->setEndValue(1.0);
+        anim->setEasingCurve(QEasingCurve::InOutQuad);
+        connect(anim, &QPropertyAnimation::finished, this, [this]() {
+            m_playlistModeWidget->hide();
+            m_fadeOverlay->hide();
+            m_fadeOverlay->setGraphicsEffect(nullptr);
+        });
+        anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        m_viewToggleButton->setIcon(QIcon::fromTheme("view-fullscreen"));
+    }
+}
+
+void MainWindow::refreshPlaylistView(const QString &dirPath)
+{
+    if (dirPath.isEmpty()) return;
+    m_playlistView->loadDirectory(dirPath, m_engine->currentTrack());
+}
+
+
+void MainWindow::resizeEvent(QResizeEvent *e)
+{
+    QMainWindow::resizeEvent(e);
+    if (m_playlistModeWidget)
+        m_playlistModeWidget->setGeometry(centralWidget()->rect());
+    if (m_fadeOverlay)
+        m_fadeOverlay->setGeometry(centralWidget()->rect());
+    if (m_nowPlayingAmbient && m_nowPlayingPanel)
+        m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
 }

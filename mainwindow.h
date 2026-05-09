@@ -37,6 +37,11 @@
 #include "ambientbar.h"
 #include <QStandardPaths>
 #include <QProcess>
+#include "playlistview.h"
+#include "nowplayingpanel.h"
+#include <QStackedWidget>
+#include <QPropertyAnimation>
+#include <QParallelAnimationGroup>
 
 class MainWindow : public QMainWindow
 {
@@ -70,6 +75,8 @@ private slots:
     void onCavaClicked();
     void updateButtonStates();
     void onQueueClicked();
+    void onViewToggled();
+    void refreshPlaylistView(const QString &dirPath);
 
 private:
     // engine
@@ -140,7 +147,17 @@ private:
 
     void setupTray();
 
+    PlaylistView    *m_playlistView   = nullptr;
+    NowPlayingPanel *m_nowPlayingPanel = nullptr;
+    QWidget         *m_playlistModeWidget = nullptr;
+    bool             m_playlistMode   = false;
+    QToolButton     *m_viewToggleButton = nullptr;
+    AmbientBar *m_nowPlayingAmbient = nullptr;
+    // QGraphicsOpacityEffect *m_playlistEffect = nullptr;
+    QWidget *m_fadeOverlay = nullptr;
+
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 };

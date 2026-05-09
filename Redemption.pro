@@ -26,7 +26,9 @@ HEADERS += \
     toastnotification.h \
     metadatadialog.h \
     scrollinglabel.h \
-    ambientbar.h
+    ambientbar.h \
+    playlistview.h \
+    nowplayingpanel.h
 
 # mpv
 LIBS += -lmpv

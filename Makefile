@@ -63,7 +63,9 @@ SOURCES       = main.cpp \
 		build/moc/moc_mprisplayer.cpp \
 		build/moc/moc_toastnotification.cpp \
 		build/moc/moc_scrollinglabel.cpp \
-		build/moc/moc_ambientbar.cpp
+		build/moc/moc_ambientbar.cpp \
+		build/moc/moc_playlistview.cpp \
+		build/moc/moc_nowplayingpanel.cpp
 OBJECTS       = build/obj/main.o \
 		build/obj/mainwindow.o \
 		build/obj/playbackengine.o \
@@ -76,7 +78,9 @@ OBJECTS       = build/obj/main.o \
 		build/obj/moc_mprisplayer.o \
 		build/obj/moc_toastnotification.o \
 		build/obj/moc_scrollinglabel.o \
-		build/obj/moc_ambientbar.o
+		build/obj/moc_ambientbar.o \
+		build/obj/moc_playlistview.o \
+		build/obj/moc_nowplayingpanel.o
 DIST          = /usr/lib/qt6/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt6/mkspecs/common/unix.conf \
 		/usr/lib/qt6/mkspecs/common/linux.conf \
@@ -397,7 +401,9 @@ DIST          = /usr/lib/qt6/mkspecs/features/spec_pre.prf \
 		toastnotification.h \
 		metadatadialog.h \
 		scrollinglabel.h \
-		ambientbar.h main.cpp \
+		ambientbar.h \
+		playlistview.h \
+		nowplayingpanel.h main.cpp \
 		mainwindow.cpp \
 		playbackengine.cpp \
 		metadatareader.cpp \
@@ -1060,7 +1066,7 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/qt6/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents mainwindow.h playbackengine.h metadatareader.h filetreemodel.h seekslider.h coverartdialog.h settingsdialog.h searchdialog.h mprisplayer.h toastnotification.h metadatadialog.h scrollinglabel.h ambientbar.h $(DISTDIR)/
+	$(COPY_FILE) --parents mainwindow.h playbackengine.h metadatareader.h filetreemodel.h seekslider.h coverartdialog.h settingsdialog.h searchdialog.h mprisplayer.h toastnotification.h metadatadialog.h scrollinglabel.h ambientbar.h playlistview.h nowplayingpanel.h $(DISTDIR)/
 	$(COPY_FILE) --parents main.cpp mainwindow.cpp playbackengine.cpp metadatareader.cpp filetreemodel.cpp mprisplayer.cpp $(DISTDIR)/
 
 
@@ -1093,9 +1099,9 @@ compiler_moc_predefs_clean:
 build/moc/moc_predefs.h: /usr/lib/qt6/mkspecs/features/data/dummy.cpp
 	g++ -pipe -O2 -std=gnu++1z -Wall -Wextra -dM -E -o build/moc/moc_predefs.h /usr/lib/qt6/mkspecs/features/data/dummy.cpp
 
-compiler_moc_header_make_all: build/moc/moc_mainwindow.cpp build/moc/moc_playbackengine.cpp build/moc/moc_filetreemodel.cpp build/moc/moc_mprisplayer.cpp build/moc/moc_toastnotification.cpp build/moc/moc_scrollinglabel.cpp build/moc/moc_ambientbar.cpp
+compiler_moc_header_make_all: build/moc/moc_mainwindow.cpp build/moc/moc_playbackengine.cpp build/moc/moc_filetreemodel.cpp build/moc/moc_mprisplayer.cpp build/moc/moc_toastnotification.cpp build/moc/moc_scrollinglabel.cpp build/moc/moc_ambientbar.cpp build/moc/moc_playlistview.cpp build/moc/moc_nowplayingpanel.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) build/moc/moc_mainwindow.cpp build/moc/moc_playbackengine.cpp build/moc/moc_filetreemodel.cpp build/moc/moc_mprisplayer.cpp build/moc/moc_toastnotification.cpp build/moc/moc_scrollinglabel.cpp build/moc/moc_ambientbar.cpp
+	-$(DEL_FILE) build/moc/moc_mainwindow.cpp build/moc/moc_playbackengine.cpp build/moc/moc_filetreemodel.cpp build/moc/moc_mprisplayer.cpp build/moc/moc_toastnotification.cpp build/moc/moc_scrollinglabel.cpp build/moc/moc_ambientbar.cpp build/moc/moc_playlistview.cpp build/moc/moc_nowplayingpanel.cpp
 build/moc/moc_mainwindow.cpp: mainwindow.h \
 		playbackengine.h \
 		filetreemodel.h \
@@ -1109,6 +1115,8 @@ build/moc/moc_mainwindow.cpp: mainwindow.h \
 		metadatadialog.h \
 		scrollinglabel.h \
 		ambientbar.h \
+		playlistview.h \
+		nowplayingpanel.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt6/moc
 	/usr/lib/qt6/moc $(DEFINES) --include /home/arch/Code/Cpp/Programs/Redemption/build/moc/moc_predefs.h -I/usr/lib/qt6/mkspecs/linux-g++ -I/home/arch/Code/Cpp/Programs/Redemption -I/usr/include/taglib -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtDBus -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/include/c++/15.2.1 -I/usr/include/c++/15.2.1/x86_64-pc-linux-gnu -I/usr/include/c++/15.2.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include-fixed -I/usr/include mainwindow.h -o build/moc/moc_mainwindow.cpp
@@ -1145,6 +1153,19 @@ build/moc/moc_ambientbar.cpp: ambientbar.h \
 		/usr/lib/qt6/moc
 	/usr/lib/qt6/moc $(DEFINES) --include /home/arch/Code/Cpp/Programs/Redemption/build/moc/moc_predefs.h -I/usr/lib/qt6/mkspecs/linux-g++ -I/home/arch/Code/Cpp/Programs/Redemption -I/usr/include/taglib -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtDBus -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/include/c++/15.2.1 -I/usr/include/c++/15.2.1/x86_64-pc-linux-gnu -I/usr/include/c++/15.2.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include-fixed -I/usr/include ambientbar.h -o build/moc/moc_ambientbar.cpp
 
+build/moc/moc_playlistview.cpp: playlistview.h \
+		metadatareader.h \
+		build/moc/moc_predefs.h \
+		/usr/lib/qt6/moc
+	/usr/lib/qt6/moc $(DEFINES) --include /home/arch/Code/Cpp/Programs/Redemption/build/moc/moc_predefs.h -I/usr/lib/qt6/mkspecs/linux-g++ -I/home/arch/Code/Cpp/Programs/Redemption -I/usr/include/taglib -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtDBus -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/include/c++/15.2.1 -I/usr/include/c++/15.2.1/x86_64-pc-linux-gnu -I/usr/include/c++/15.2.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include-fixed -I/usr/include playlistview.h -o build/moc/moc_playlistview.cpp
+
+build/moc/moc_nowplayingpanel.cpp: nowplayingpanel.h \
+		seekslider.h \
+		ambientbar.h \
+		build/moc/moc_predefs.h \
+		/usr/lib/qt6/moc
+	/usr/lib/qt6/moc $(DEFINES) --include /home/arch/Code/Cpp/Programs/Redemption/build/moc/moc_predefs.h -I/usr/lib/qt6/mkspecs/linux-g++ -I/home/arch/Code/Cpp/Programs/Redemption -I/usr/include/taglib -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtDBus -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/include/c++/15.2.1 -I/usr/include/c++/15.2.1/x86_64-pc-linux-gnu -I/usr/include/c++/15.2.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include-fixed -I/usr/include nowplayingpanel.h -o build/moc/moc_nowplayingpanel.cpp
+
 compiler_moc_objc_header_make_all:
 compiler_moc_objc_header_clean:
 compiler_moc_source_make_all:
@@ -1173,7 +1194,9 @@ build/obj/main.o: main.cpp mainwindow.h \
 		toastnotification.h \
 		metadatadialog.h \
 		scrollinglabel.h \
-		ambientbar.h
+		ambientbar.h \
+		playlistview.h \
+		nowplayingpanel.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/main.o main.cpp
 
 build/obj/mainwindow.o: mainwindow.cpp mainwindow.h \
@@ -1188,7 +1211,9 @@ build/obj/mainwindow.o: mainwindow.cpp mainwindow.h \
 		toastnotification.h \
 		metadatadialog.h \
 		scrollinglabel.h \
-		ambientbar.h
+		ambientbar.h \
+		playlistview.h \
+		nowplayingpanel.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/mainwindow.o mainwindow.cpp
 
 build/obj/playbackengine.o: playbackengine.cpp playbackengine.h
@@ -1226,6 +1251,12 @@ build/obj/moc_scrollinglabel.o: build/moc/moc_scrollinglabel.cpp
 
 build/obj/moc_ambientbar.o: build/moc/moc_ambientbar.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/moc_ambientbar.o build/moc/moc_ambientbar.cpp
+
+build/obj/moc_playlistview.o: build/moc/moc_playlistview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/moc_playlistview.o build/moc/moc_playlistview.cpp
+
+build/obj/moc_nowplayingpanel.o: build/moc/moc_nowplayingpanel.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build/obj/moc_nowplayingpanel.o build/moc/moc_nowplayingpanel.cpp
 
 ####### Install
 
