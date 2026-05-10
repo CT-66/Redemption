@@ -13,7 +13,6 @@
 #include <QtConcurrent>
 #include <QHoverEvent>
 #include <QPainterPath>
-#include <QDebug>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -2011,10 +2010,6 @@ void MainWindow::onViewToggled()
         m_fadeOverlay->setGeometry(centralWidget()->rect());
         // m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
 
-qDebug() << "centralWidget rect:" << centralWidget()->rect();
-qDebug() << "playlistModeWidget geometry:" << m_playlistModeWidget->geometry();
-qDebug() << "ambientBar geometry:" << m_ambientBar->geometry();
-
         refreshPlaylistView(m_engine->currentDirPath());
         m_nowPlayingPanel->setTitle(m_titleLabel->text());
         m_nowPlayingPanel->setArtist(m_artistLabel->text());
@@ -2029,10 +2024,10 @@ qDebug() << "ambientBar geometry:" << m_ambientBar->geometry();
         m_playlistModeWidget->raise();
     m_ambientBar->lower();
 
-QTimer::singleShot(50, this, [this]() {
-    m_nowPlayingPanel->setCover(m_currentCover);
-    m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
-});
+    QTimer::singleShot(50, this, [this]() {
+        m_nowPlayingPanel->setCover(m_currentCover);
+        m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+    });
 
         // fade overlay on top, then hide it
         m_fadeOverlay->setGeometry(centralWidget()->rect());

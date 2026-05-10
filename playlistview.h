@@ -68,6 +68,7 @@ public:
             "}"
         );
         m_listWidget->setIconSize(QSize(40, 40));
+        m_listWidget->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         m_listWidget->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
         QVBoxLayout *layout = new QVBoxLayout(this);
@@ -93,9 +94,27 @@ public:
 
         QFileInfoList entries = dir.entryInfoList();
         // natural sort
+        // std::sort(entries.begin(), entries.end(),
+        //     [](const QFileInfo &a, const QFileInfo &b) {
+        //         return a.fileName().toLower() < b.fileName().toLower();
+        //     });
         std::sort(entries.begin(), entries.end(),
             [](const QFileInfo &a, const QFileInfo &b) {
-                return a.fileName().toLower() < b.fileName().toLower();
+                QString an = a.fileName().toLower();
+                QString bn = b.fileName().toLower();
+                int i = 0, j = 0;
+                while (i < an.size() && j < bn.size()) {
+                    if (an[i].isDigit() && bn[j].isDigit()) {
+                        QString na, nb;
+                        while (i < an.size() && an[i].isDigit()) na += an[i++];
+                        while (j < bn.size() && bn[j].isDigit()) nb += bn[j++];
+                        if (na != nb) return na.toInt() < nb.toInt();
+                    } else {
+                        if (an[i] != bn[j]) return an[i] < bn[j];
+                        ++i; ++j;
+                    }
+                }
+                return an.size() < bn.size();
             });
 
         for (const QFileInfo &info : entries) {
