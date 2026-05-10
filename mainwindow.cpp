@@ -13,6 +13,7 @@
 #include <QtConcurrent>
 #include <QHoverEvent>
 #include <QPainterPath>
+#include <QDebug>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -541,14 +542,18 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
 
     QWidget *central = new QWidget();
     central->setLayout(mainLayout);
+    setCentralWidget(central);
 
         m_playlistModeWidget = new QWidget(central);
+    m_playlistModeWidget->setParent(centralWidget());
     m_playlistModeWidget->setObjectName("playlistModeWidget");
     QHBoxLayout *playlistLayout = new QHBoxLayout(m_playlistModeWidget);
     playlistLayout->setContentsMargins(0, 0, 0, 0);
     playlistLayout->setSpacing(0);
     playlistLayout->addWidget(m_playlistView, 35);
     playlistLayout->addWidget(m_nowPlayingPanel, 65);
+
+    m_playlistModeWidget->setAutoFillBackground(true);
 
 // m_playlistEffect = new QGraphicsOpacityEffect(m_playlistModeWidget);
 // m_playlistEffect->setOpacity(0.0);
@@ -559,7 +564,7 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
     m_fadeOverlay->hide();
 
     m_playlistModeWidget->hide();
-    m_playlistModeWidget->setGeometry(central->rect());
+    // m_playlistModeWidget->setGeometry(central->rect());
 
 
     // connect playlist view signals
@@ -575,7 +580,7 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
     });
 
 
-    setCentralWidget(central);
+    // setCentralWidget(central);
 
     updateNowPlaying("");
 }
@@ -693,7 +698,7 @@ void MainWindow::onTrackChanged(const QString &filePath)
     // playlist mode stuff
     if (m_playlistMode) {
         QString newDir = QFileInfo(filePath).absolutePath();
-        if (newDir != m_engine->currentDirPath())
+        if (newDir != m_playlistView->currentDir())
             refreshPlaylistView(newDir);
         else
             m_playlistView->updateCurrentTrack(filePath);
@@ -2000,16 +2005,29 @@ void MainWindow::onViewToggled()
     }
     */
    if (m_playlistMode) {
+
+        // force correct geometry BEFORE showing
+        m_playlistModeWidget->setGeometry(centralWidget()->rect());
+        m_fadeOverlay->setGeometry(centralWidget()->rect());
+        // m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+
+qDebug() << "centralWidget rect:" << centralWidget()->rect();
+qDebug() << "playlistModeWidget geometry:" << m_playlistModeWidget->geometry();
+qDebug() << "ambientBar geometry:" << m_ambientBar->geometry();
+
         refreshPlaylistView(m_engine->currentDirPath());
         m_nowPlayingPanel->setTitle(m_titleLabel->text());
         m_nowPlayingPanel->setArtist(m_artistLabel->text());
         m_nowPlayingPanel->setCover(m_currentCover);
-        m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+        // m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
         m_nowPlayingAmbient->updateFromCover(m_currentCover);
 
+    m_playlistModeWidget->move(0, 0);
+    m_playlistModeWidget->resize(centralWidget()->size());
         m_playlistModeWidget->setGeometry(centralWidget()->rect());
         m_playlistModeWidget->show();
         m_playlistModeWidget->raise();
+    m_ambientBar->lower();
 
         // fade overlay on top, then hide it
         m_fadeOverlay->setGeometry(centralWidget()->rect());
@@ -2048,6 +2066,7 @@ void MainWindow::onViewToggled()
         anim->setEasingCurve(QEasingCurve::InOutQuad);
         connect(anim, &QPropertyAnimation::finished, this, [this]() {
             m_playlistModeWidget->hide();
+        m_ambientBar->raise();
             m_fadeOverlay->hide();
             m_fadeOverlay->setGraphicsEffect(nullptr);
         });
@@ -2064,13 +2083,32 @@ void MainWindow::refreshPlaylistView(const QString &dirPath)
 }
 
 
+/*
 void MainWindow::resizeEvent(QResizeEvent *e)
 {
     QMainWindow::resizeEvent(e);
-    if (m_playlistModeWidget)
+    if (m_playlistModeWidget && centralWidget()) {
         m_playlistModeWidget->setGeometry(centralWidget()->rect());
-    if (m_fadeOverlay)
+        m_playlistModeWidget->raise();
+    }
+    if (m_fadeOverlay && centralWidget())
+        m_fadeOverlay->setGeometry(centralWidget()->rect());
+    // if (m_nowPlayingAmbient && m_nowPlayingPanel)
+    //     m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+    if (m_playlistMode && m_nowPlayingPanel)
+        m_nowPlayingPanel->setCover(m_currentCover);
+}
+*/
+
+void MainWindow::resizeEvent(QResizeEvent *e)
+{
+    QMainWindow::resizeEvent(e);
+    if (m_playlistModeWidget && centralWidget())
+        m_playlistModeWidget->resize(centralWidget()->size());
+    if (m_fadeOverlay && centralWidget())
         m_fadeOverlay->setGeometry(centralWidget()->rect());
     if (m_nowPlayingAmbient && m_nowPlayingPanel)
         m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+    if (m_playlistMode && m_nowPlayingPanel && !m_currentCover.isNull())
+        m_nowPlayingPanel->setCover(m_currentCover);
 }

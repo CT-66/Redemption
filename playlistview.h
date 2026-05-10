@@ -123,7 +123,7 @@ public:
                 p.drawPixmap(0, 0, thumb);
                 item->setIcon(QIcon(rounded));
             } else {
-                item->setIcon(QIcon::fromTheme("audio-x-generic"));
+                item->setIcon(QIcon::fromTheme("media-album-cover"));
             }
 
             m_listWidget->addItem(item);
@@ -152,6 +152,7 @@ public:
     QToolButton *switchButton() const { return m_switchButton; }
     QToolButton *searchButton() const { return m_searchButton; }
     QListWidget *listWidget() const { return m_listWidget; }
+    QString currentDir() const { return m_currentDir; }
 
 private:
     QLabel *m_dirLabel = nullptr;

@@ -98,6 +98,10 @@ public:
 
     void setCover(const QPixmap &pixmap, int radius = 16)
     {
+        m_lastCover = pixmap;
+        int sz = qMin(m_coverLabel->width(), m_coverLabel->height());
+        if (sz < 50) sz = 250;
+
         if (pixmap.isNull()) {
             QPixmap fallback(250, 250);
             fallback.fill(Qt::transparent);
@@ -139,4 +143,8 @@ private:
     QLabel *m_elapsedLabel = nullptr;
     QLabel *m_remainingLabel = nullptr;
     QHBoxLayout *m_controlsLayout = nullptr;
+    QPixmap m_lastCover;
+
+
+
 };
