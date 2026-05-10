@@ -2029,6 +2029,11 @@ qDebug() << "ambientBar geometry:" << m_ambientBar->geometry();
         m_playlistModeWidget->raise();
     m_ambientBar->lower();
 
+QTimer::singleShot(50, this, [this]() {
+    m_nowPlayingPanel->setCover(m_currentCover);
+    m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+});
+
         // fade overlay on top, then hide it
         m_fadeOverlay->setGeometry(centralWidget()->rect());
         m_fadeOverlay->show();

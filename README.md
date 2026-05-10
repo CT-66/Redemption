@@ -14,4 +14,4 @@
 - playlist view draggable and adjustable, semi blurred , remove scrollbar
 - using search blocks all shortcuts?
 - rounded corner and bg for no cover songs
-- not using natural sort
+- not using natural sort, why, backend ought to be unchanged?

@@ -146,5 +146,4 @@ private:
     QPixmap m_lastCover;
 
 
-
 };
