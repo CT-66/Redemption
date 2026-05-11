@@ -25,6 +25,8 @@ public:
     {
         setObjectName("playlistView");
 
+                // setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
         // top bar
         m_dirLabel = new QLabel("No directory");
         m_dirLabel->setStyleSheet(
@@ -76,6 +78,7 @@ public:
         layout->addLayout(topBar);
         layout->addSpacing(8);
         layout->addWidget(m_listWidget);
+
     }
 
     void loadDirectory(const QString &dirPath, const QString &currentTrack)
@@ -142,7 +145,17 @@ public:
                 p.drawPixmap(0, 0, thumb);
                 item->setIcon(QIcon(rounded));
             } else {
-                item->setIcon(QIcon::fromTheme("media-album-cover"));
+                // item->setIcon(QIcon::fromTheme("media-album-cover"));
+                QPixmap placeholder(40, 40);
+                placeholder.fill(Qt::transparent);
+                QPainter p(&placeholder);
+                p.setRenderHint(QPainter::Antialiasing);
+                p.setBrush(QColor(255, 255, 255, 30));
+                p.setPen(Qt::NoPen);
+                p.drawRoundedRect(0, 0, 40, 40, 6, 6);
+                // QIcon::fromTheme("media-album-cover").paint(&p, 8, 8, 24, 24);
+                QIcon::fromTheme("audio-x-generic").paint(&p, 8, 8, 24, 24);
+                item->setIcon(QIcon(placeholder));
             }
 
             m_listWidget->addItem(item);

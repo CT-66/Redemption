@@ -155,6 +155,7 @@ private:
     AmbientBar *m_nowPlayingAmbient = nullptr;
     // QGraphicsOpacityEffect *m_playlistEffect = nullptr;
     QWidget *m_fadeOverlay = nullptr;
+    AmbientBar *m_playlistAmbient = nullptr;
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

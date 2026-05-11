@@ -175,6 +175,7 @@ public:
         m_enabled = enabled;
         update();
     }
+        void setDarkOverlay(int alpha) { m_darkOverlay = alpha; update(); }
 
 protected:
     void paintEvent(QPaintEvent *) override
@@ -197,7 +198,7 @@ protected:
         if (!m_previousImage.isNull() && m_fadeOpacity < 1.0f) {
             p.setOpacity(1.0f - m_fadeOpacity);
             p.drawImage(r, m_previousImage);
-            p.fillRect(r, QColor(0, 0, 0, 110));
+            p.fillRect(r, QColor(0, 0, 0, m_darkOverlay));
             drawGlows(p, r, m_previousDominant);
         }
 
@@ -205,7 +206,7 @@ protected:
         if (!m_blurredImage.isNull()) {
             p.setOpacity(m_fadeOpacity);
             p.drawImage(r, m_blurredImage);
-            p.fillRect(r, QColor(0, 0, 0, 110));
+            p.fillRect(r, QColor(0, 0, 0, m_darkOverlay));
             drawGlows(p, r, m_dominant);
         }
 
@@ -240,6 +241,7 @@ private:
     bool m_enabled = true;
     QTimer *m_fadeTimer = nullptr;
     QFutureWatcher<QPair<QImage, QColor>> *m_watcher = nullptr;
+    int m_darkOverlay = 110;
 
     void startFade()
     {

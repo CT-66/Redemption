@@ -549,10 +549,12 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
     QHBoxLayout *playlistLayout = new QHBoxLayout(m_playlistModeWidget);
     playlistLayout->setContentsMargins(0, 0, 0, 0);
     playlistLayout->setSpacing(0);
-    playlistLayout->addWidget(m_playlistView, 35);
-    playlistLayout->addWidget(m_nowPlayingPanel, 65);
+    // playlistLayout->addWidget(m_playlistView, 35);
+    // playlistLayout->addWidget(m_nowPlayingPanel, 65);
+        playlistLayout->addWidget(m_playlistView, 28);
+    playlistLayout->addWidget(m_nowPlayingPanel, 72);
 
-    m_playlistModeWidget->setAutoFillBackground(true);
+    // m_playlistModeWidget->setAutoFillBackground(true);
 
 // m_playlistEffect = new QGraphicsOpacityEffect(m_playlistModeWidget);
 // m_playlistEffect->setOpacity(0.0);
@@ -563,7 +565,20 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
     m_fadeOverlay->hide();
 
     m_playlistModeWidget->hide();
+
+m_playlistAmbient = new AmbientBar(m_playlistView);
+m_playlistAmbient->setGeometry(m_playlistView->rect());
+m_playlistAmbient->raise();
+m_playlistAmbient->lower();
+m_playlistAmbient->setDarkOverlay(160);
+// m_playlistAmbient->setDarkOverlay(200);
     // m_playlistModeWidget->setGeometry(central->rect());
+
+m_playlistView->installEventFilter(this);
+m_playlistView->listWidget()->installEventFilter(this);
+m_nowPlayingPanel->installEventFilter(this);
+
+m_playlistView->setMaximumWidth(300);
 
 
     // connect playlist view signals
@@ -706,6 +721,7 @@ void MainWindow::onTrackChanged(const QString &filePath)
         m_nowPlayingPanel->setArtist(m_artistLabel->text());
         m_nowPlayingPanel->setCover(m_currentCover);
         m_nowPlayingAmbient->updateFromCover(m_currentCover);
+        m_playlistAmbient->updateFromCover(m_currentCover);
     }
 }
 
@@ -2017,16 +2033,23 @@ void MainWindow::onViewToggled()
         // m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
         m_nowPlayingAmbient->updateFromCover(m_currentCover);
 
-    m_playlistModeWidget->move(0, 0);
-    m_playlistModeWidget->resize(centralWidget()->size());
+        m_playlistModeWidget->move(0, 0);
+        m_playlistModeWidget->resize(centralWidget()->size());
         m_playlistModeWidget->setGeometry(centralWidget()->rect());
+        m_ambientBar->hide();
+        m_treeView->hide();
         m_playlistModeWidget->show();
         m_playlistModeWidget->raise();
-    m_ambientBar->lower();
+        m_ambientBar->lower();
+
+    m_playlistAmbient->updateFromCover(m_currentCover);
 
     QTimer::singleShot(50, this, [this]() {
         m_nowPlayingPanel->setCover(m_currentCover);
         m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+    m_playlistAmbient->setGeometry(m_playlistView->rect());
+    // m_playlistAmbient->raise();
+    update();
     });
 
         // fade overlay on top, then hide it
@@ -2067,6 +2090,8 @@ void MainWindow::onViewToggled()
         connect(anim, &QPropertyAnimation::finished, this, [this]() {
             m_playlistModeWidget->hide();
         m_ambientBar->raise();
+        m_ambientBar->show();
+        m_treeView->show();
             m_fadeOverlay->hide();
             m_fadeOverlay->setGraphicsEffect(nullptr);
         });
@@ -2111,4 +2136,6 @@ void MainWindow::resizeEvent(QResizeEvent *e)
         m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
     if (m_playlistMode && m_nowPlayingPanel && !m_currentCover.isNull())
         m_nowPlayingPanel->setCover(m_currentCover);
+    if (m_playlistAmbient && m_playlistView)
+        m_playlistAmbient->setGeometry(m_playlistView->rect());
 }
