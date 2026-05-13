@@ -303,7 +303,8 @@ public:
             p.setPen(Qt::NoPen);
             p.drawRoundedRect(0, 0, sz, sz, radius, radius);
             // QIcon::fromTheme("media-album-cover").paint(&p, sz/4, sz/4, sz/2, sz/2);
-            QIcon::fromTheme("audio-x-generic").paint(&p, sz/4, sz/4, sz/2, sz/2);
+            // QIcon::fromTheme("audio-x-generic").paint(&p, sz/4, sz/4, sz/2, sz/2);
+            QIcon::fromTheme("library-music-symbolic").paint(&p, sz/4, sz/4, sz/2, sz/2);
             m_coverLabel->setFixedSize(sz, sz);
             m_coverLabel->setPixmap(fallback);
         }

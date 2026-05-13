@@ -158,7 +158,8 @@ public:
                 p.setPen(Qt::NoPen);
                 p.drawRoundedRect(0, 0, 40, 40, 6, 6);
                 // QIcon::fromTheme("media-album-cover").paint(&p, 8, 8, 24, 24);
-                QIcon::fromTheme("audio-x-generic").paint(&p, 8, 8, 24, 24);
+                // QIcon::fromTheme("audio-x-generic").paint(&p, 8, 8, 24, 24);
+                QIcon::fromTheme("library-music-symbolic").paint(&p, 8, 8, 24, 24);
                 item->setIcon(QIcon(placeholder));
             }
 

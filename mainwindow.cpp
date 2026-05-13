@@ -912,7 +912,8 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         painter.drawRoundedRect(0, 0, 150, 150, 12, 12);
         // draw icon centered
         // QIcon::fromTheme("media-album-cover").paint(&painter, 25, 25, 100, 100);
-        QIcon::fromTheme("audio-x-generic").paint(&painter, 25, 25, 100, 100);
+        // QIcon::fromTheme("audio-x-generic").paint(&painter, 25, 25, 100, 100);
+        QIcon::fromTheme("library-music-symbolic").paint(&painter, 25, 25, 100, 100);
         painter.end();
         m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
         m_ambientBar->updateFromCover(QPixmap());
@@ -978,7 +979,8 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         painter.drawRoundedRect(0, 0, 150, 150, 12, 12);
         // draw icon centered
         // QIcon::fromTheme("media-album-cover").paint(&painter, 25, 25, 100, 100);
-        QIcon::fromTheme("audio-x-generic").paint(&painter, 25, 25, 100, 100);
+        // QIcon::fromTheme("audio-x-generic").paint(&painter, 25, 25, 100, 100);
+        QIcon::fromTheme("library-music-symbolic").paint(&painter, 25, 25, 100, 100);
         painter.end();
         m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
         m_ambientBar->updateFromCover(QPixmap());

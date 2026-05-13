@@ -358,7 +358,8 @@ QVariant FileTreeModel::data(const QModelIndex &index, int role) const
         if (m_loopMode == (int)LoopMode::Track && node->path == m_loopPath) {
             return QIcon::fromTheme("media-playlist-repeat-song");
         }
-        return QIcon::fromTheme("audio-x-generic");
+        // return QIcon::fromTheme("audio-x-generic");
+        return QIcon::fromTheme("library-music-symbolic");
     }
 
     return QVariant();
