@@ -302,7 +302,8 @@ public:
             p.setBrush(QColor(255, 255, 255, 30));
             p.setPen(Qt::NoPen);
             p.drawRoundedRect(0, 0, sz, sz, radius, radius);
-            QIcon::fromTheme("media-album-cover").paint(&p, sz/4, sz/4, sz/2, sz/2);
+            // QIcon::fromTheme("media-album-cover").paint(&p, sz/4, sz/4, sz/2, sz/2);
+            QIcon::fromTheme("audio-x-generic").paint(&p, sz/4, sz/4, sz/2, sz/2);
             m_coverLabel->setFixedSize(sz, sz);
             m_coverLabel->setPixmap(fallback);
         }
