@@ -79,6 +79,10 @@ public:
         layout->addSpacing(8);
         layout->addWidget(m_listWidget);
 
+        m_listWidget->setFocusPolicy(Qt::ClickFocus);
+        m_searchButton->setFocusPolicy(Qt::NoFocus);
+        m_switchButton->setFocusPolicy(Qt::NoFocus);
+
     }
 
     void loadDirectory(const QString &dirPath, const QString &currentTrack)

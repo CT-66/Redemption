@@ -13,6 +13,7 @@
 #include <QtConcurrent>
 #include <QHoverEvent>
 #include <QPainterPath>
+#include <QDebug>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -58,6 +59,9 @@ MainWindow::MainWindow(QWidget *parent)
         m_playButton->setIcon(QIcon::fromTheme(
             paused ? "media-playback-start" : "media-playback-pause"));
         m_mpris->updatePlaybackStatus();
+        if (m_nowPlayingPlayButton)
+            m_nowPlayingPlayButton->setIcon(QIcon::fromTheme(
+                paused ? "media-playback-start" : "media-playback-pause"));
     });
     connect(m_engine, &PlaybackEngine::durationChanged,
             this, [this](double duration) {
@@ -70,6 +74,7 @@ MainWindow::MainWindow(QWidget *parent)
     updateLoopIcon();
     updateShuffleIcon();
     updateButtonStates();
+setupNowPlayingControls();
     setupTray();
     // buildSearchIndex();
     // QTimer::singleShot(100, this, [this]() {
@@ -318,6 +323,7 @@ void MainWindow::setupUi()
     m_shuffleButton->setAutoRaise(true);
     connect(m_shuffleButton, &QToolButton::clicked, this, &MainWindow::onShuffleClicked);
 
+/*
 m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(m_loopButton, &QToolButton::customContextMenuRequested,
             this, [this](const QPoint &pos) {
@@ -365,6 +371,8 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
             m_treeView->viewport()->update();
             ToastNotification::show(this, "Looping queue", "media-playlist-repeat");
         });
+
+
         menu.exec(m_loopButton->mapToGlobal(pos));
     });
 
@@ -415,6 +423,143 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
             m_treeView->viewport()->update();
             ToastNotification::show(this, "Shuffling all", "media-playlist-shuffle");
         });
+        menu.exec(m_shuffleButton->mapToGlobal(pos));
+    });
+*/
+
+    m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_loopButton, &QToolButton::customContextMenuRequested,
+            this, [this](const QPoint &pos) {
+        if (!m_loopButton->isEnabled()) return;
+        QMenu menu(this);
+
+        QAction *noLoop = menu.addAction("No loop");
+        noLoop->setCheckable(true);
+        noLoop->setChecked(m_engine->loopMode() == LoopMode::None);
+        connect(noLoop, &QAction::triggered, this, [this]() {
+            m_engine->setLoopMode(LoopMode::None);
+            m_engine->setLoopTargetPath("");
+            m_engine->restoreQueue();
+            updateLoopIcon();
+            updateButtonStates();
+            m_model->setLoopState((int)LoopMode::None, "");
+            m_treeView->viewport()->update();
+            ToastNotification::show(this, "Loop off", "media-playlist-repeat");
+        });
+
+        QAction *loopTrack = menu.addAction("Loop track");
+        loopTrack->setCheckable(true);
+        loopTrack->setChecked(m_engine->loopMode() == LoopMode::Track);
+        connect(loopTrack, &QAction::triggered, this, [this]() {
+            m_engine->setShuffleMode(ShuffleMode::Off);
+            m_engine->setLoopMode(LoopMode::Track);
+            m_engine->setLoopTargetPath(m_engine->currentTrack());
+            updateLoopIcon();
+            updateShuffleIcon();
+            updateButtonStates();
+            m_model->setLoopState((int)LoopMode::Track, m_engine->currentTrack());
+            m_treeView->viewport()->update();
+            ToastNotification::show(this, "Looping track", "media-playlist-repeat-song");
+        });
+
+        QAction *loopDir = menu.addAction("Loop directory");
+        loopDir->setCheckable(true);
+        loopDir->setChecked(m_engine->loopMode() == LoopMode::Directory);
+        connect(loopDir, &QAction::triggered, this, [this]() {
+            m_engine->setShuffleMode(ShuffleMode::Off);
+            m_engine->setLoopMode(LoopMode::Directory);
+            m_engine->setLoopTargetPath(m_engine->currentDirPath());
+            updateLoopIcon();
+            updateShuffleIcon();
+            updateButtonStates();
+            m_model->setLoopState((int)LoopMode::Directory, m_engine->currentDirPath());
+            m_treeView->viewport()->update();
+            ToastNotification::show(this, "Looping directory", "media-playlist-repeat");
+        });
+
+        QAction *loopQueue = menu.addAction("Loop queue");
+        loopQueue->setCheckable(true);
+        loopQueue->setChecked(m_engine->loopMode() == LoopMode::Queue);
+        connect(loopQueue, &QAction::triggered, this, [this]() {
+            m_engine->setShuffleMode(ShuffleMode::Off);
+            m_engine->setLoopMode(LoopMode::Queue);
+            m_engine->setLoopTargetPath("");
+            m_engine->restoreQueue();
+            updateLoopIcon();
+            updateShuffleIcon();
+            updateButtonStates();
+            m_model->setLoopState((int)LoopMode::Queue, "");
+            m_treeView->viewport()->update();
+            ToastNotification::show(this, "Looping queue", "media-playlist-repeat");
+        });
+
+        menu.exec(m_loopButton->mapToGlobal(pos));
+    });
+
+    m_shuffleButton->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_shuffleButton, &QToolButton::customContextMenuRequested,
+            this, [this](const QPoint &pos) {
+        if (!m_shuffleButton->isEnabled()) return;
+        QMenu menu(this);
+
+        QAction *shuffleOff = menu.addAction("Shuffle off");
+        shuffleOff->setCheckable(true);
+        shuffleOff->setChecked(m_engine->shuffleMode() == ShuffleMode::Off);
+        connect(shuffleOff, &QAction::triggered, this, [this]() {
+            m_engine->setShuffleMode(ShuffleMode::Off);
+            m_engine->setShuffleTargetPath("");
+            m_engine->restoreQueue();
+            updateShuffleIcon();
+            updateButtonStates();
+            m_model->setShuffleState((int)ShuffleMode::Off, "");
+            m_treeView->viewport()->update();
+            ToastNotification::show(this, "Shuffle off", "media-playlist-shuffle");
+        });
+
+        QAction *shuffleDir = menu.addAction("Shuffle directory");
+        shuffleDir->setCheckable(true);
+        shuffleDir->setChecked(m_engine->shuffleMode() == ShuffleMode::Directory);
+        connect(shuffleDir, &QAction::triggered, this, [this]() {
+            m_engine->setLoopMode(LoopMode::None);
+            m_engine->setLoopTargetPath("");
+            m_engine->setShuffleMode(ShuffleMode::Directory);
+            m_engine->setShuffleTargetPath(m_engine->currentDirPath());
+            QStringList fullQueue = m_model->collectAudioFiles(
+                QDir::homePath() + "/Music");
+            QString current = m_engine->currentTrack();
+            int idx = fullQueue.indexOf(current);
+            m_engine->playFrom(fullQueue, idx >= 0 ? idx : 0);
+            updateLoopIcon();
+            updateShuffleIcon();
+            updateButtonStates();
+            m_model->setShuffleState((int)ShuffleMode::Directory,
+                m_engine->currentDirPath());
+            m_treeView->viewport()->update();
+            ToastNotification::show(this, "Shuffling directory",
+                "media-playlist-shuffle");
+        });
+
+        QAction *shuffleAll = menu.addAction("Shuffle all");
+        shuffleAll->setCheckable(true);
+        shuffleAll->setChecked(m_engine->shuffleMode() == ShuffleMode::All);
+        connect(shuffleAll, &QAction::triggered, this, [this]() {
+            m_engine->setLoopMode(LoopMode::None);
+            m_engine->setLoopTargetPath("");
+            m_engine->setShuffleMode(ShuffleMode::All);
+            m_engine->setShuffleTargetPath("");
+            QStringList fullQueue = m_model->collectAudioFiles(
+                QDir::homePath() + "/Music");
+            QString current = m_engine->currentTrack();
+            int idx = fullQueue.indexOf(current);
+            m_engine->playFrom(fullQueue, idx >= 0 ? idx : 0);
+            updateLoopIcon();
+            updateShuffleIcon();
+            updateButtonStates();
+            m_model->setShuffleState((int)ShuffleMode::All, "");
+            m_treeView->viewport()->update();
+            ToastNotification::show(this, "Shuffling all", "media-playlist-shuffle");
+        });
+
         menu.exec(m_shuffleButton->mapToGlobal(pos));
     });
 
@@ -593,8 +738,18 @@ m_playlistView->setMaximumWidth(300);
             playFromPath(path);
     });
 
+    m_nowPlayingPanel->installEventFilter(this);
+    m_nowPlayingPanel->seekBar()->installEventFilter(this);
 
     // setCentralWidget(central);
+
+    // prevent focus on buttons when pressing tab
+    for (auto *btn : {m_playButton, m_prevButton, m_nextButton,
+                      m_searchButton, m_viewToggleButton, m_muteButton,
+                      m_loopButton, m_shuffleButton, m_queueButton,
+                      m_cavaButton, m_settingsButton}) {
+        btn->setFocusPolicy(Qt::NoFocus);
+    }
 
     updateNowPlaying("");
 }
@@ -861,7 +1016,7 @@ void MainWindow::updateSeekBar()
     mpv_get_property(m_engine->mpvHandle(), "duration", MPV_FORMAT_DOUBLE, &duration);
 
     if (duration > 0) {
-        m_seekBar->setDuration(duration);  // add this line
+        m_seekBar->setDuration(duration);
         m_seekBar->setValue(static_cast<int>((pos / duration) * 1000));
 
         int p = static_cast<int>(pos);
@@ -878,7 +1033,22 @@ void MainWindow::updateSeekBar()
             m_remainingLabel->setText(QString("%1:%2")
                 .arg(d / 60).arg(d % 60, 2, 10, QChar('0')));
         }
+
+        // m_nowPlayingPanel->seekBar()->setValue(val);
+        // m_nowPlayingPanel->seekBar()->setDuration(duration);
+        // m_nowPlayingPanel->elapsedLabel()->setText(elapsed);
+        // m_nowPlayingPanel->remainingLabel()->setText(remaining);
+        int val = static_cast<int>((pos / duration) * 1000);
+        m_nowPlayingPanel->seekBar()->setValue(val);
+        m_nowPlayingPanel->seekBar()->setDuration(duration);
+        m_nowPlayingPanel->elapsedLabel()->setText(QString("%1:%2")
+            .arg(p / 60).arg(p % 60, 2, 10, QChar('0')));
+        m_nowPlayingPanel->remainingLabel()->setText(
+            m_showRemaining
+            ? QString("-%1:%2").arg((d-p)/60).arg((d-p)%60, 2, 10, QChar('0'))
+            : QString("%1:%2").arg(d/60).arg(d%60, 2, 10, QChar('0')));
     }
+
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
@@ -928,6 +1098,15 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     }
     if (event->type() == QEvent::MouseButtonRelease && obj == m_seekBar) {
         m_treeView->setFocus();
+        return false;
+    }
+    if (event->type() == QEvent::MouseButtonPress && obj == m_nowPlayingVolume) {
+        QMouseEvent *me = static_cast<QMouseEvent*>(event);
+        int val = QStyle::sliderValueFromPosition(
+            m_nowPlayingVolume->minimum(), m_nowPlayingVolume->maximum(),
+            me->pos().x(), m_nowPlayingVolume->width());
+        m_nowPlayingVolume->setValue(val);
+        onVolumeChanged(val);
         return false;
     }
     if (obj == m_artistLabel) {
@@ -1088,6 +1267,10 @@ void MainWindow::onMuteClicked()
     ToastNotification::show(this, m_muted ? "Muted" : "Unmuted",
     m_muted ? "audio-volume-muted" : "audio-volume-high");
     m_muteButton->setToolTip(m_muted ? "Unmute (Ctrl+M)" : "Mute (Ctrl+M)");
+
+    if (m_nowPlayingMuteButton)
+        m_nowPlayingMuteButton->setIcon(QIcon::fromTheme(
+            m_muted ? "audio-volume-muted" : "audio-volume-high"));
 }
 
 
@@ -1387,6 +1570,13 @@ void MainWindow::onSearchClicked()
     SearchDialog dialog(m_searchIndex, this, !m_indexReady);
     if (dialog.exec() == QDialog::Accepted)
         playFromPath(dialog.selectedPath());
+    m_treeView->setFocus();
+    // clear focus from all buttons
+    m_playButton->clearFocus();
+    m_prevButton->clearFocus();
+    m_nextButton->clearFocus();
+    m_searchButton->clearFocus();
+    m_viewToggleButton->clearFocus();
 }
 
 void MainWindow::setupTray()
@@ -2092,6 +2282,7 @@ void MainWindow::onViewToggled()
         m_ambientBar->raise();
         m_ambientBar->show();
         m_treeView->show();
+        m_treeView->setFocus();
             m_fadeOverlay->hide();
             m_fadeOverlay->setGraphicsEffect(nullptr);
         });
@@ -2138,4 +2329,118 @@ void MainWindow::resizeEvent(QResizeEvent *e)
         m_nowPlayingPanel->setCover(m_currentCover);
     if (m_playlistAmbient && m_playlistView)
         m_playlistAmbient->setGeometry(m_playlistView->rect());
+    if (m_playlistMode && m_nowPlayingPanel && !m_currentCover.isNull())
+        m_nowPlayingPanel->setCover(m_currentCover);
+        qDebug() << "coverLabel size:" << m_nowPlayingPanel->coverLabel()->size();
+}
+
+void MainWindow::setupNowPlayingControls()
+{
+    // --- playback buttons ---
+    QToolButton *prev = new QToolButton();
+    m_nowPlayingPlayButton = new QToolButton();
+    QToolButton *next = new QToolButton();
+
+    prev->setIcon(QIcon::fromTheme("media-skip-backward"));
+    m_nowPlayingPlayButton->setIcon(QIcon::fromTheme("media-playback-pause"));
+    next->setIcon(QIcon::fromTheme("media-skip-forward"));
+
+    for (QToolButton *btn : {prev, m_nowPlayingPlayButton, next}) {
+        btn->setFixedSize(52, 52);
+        btn->setIconSize(QSize(28, 28));
+        btn->setAutoRaise(true);
+    }
+
+    connect(prev, &QToolButton::clicked, this, &MainWindow::onPreviousClicked);
+    connect(next, &QToolButton::clicked, this, &MainWindow::onNextClicked);
+    connect(m_nowPlayingPlayButton, &QToolButton::clicked,
+            this, &MainWindow::onPlayPauseClicked);
+
+    m_nowPlayingPanel->controlsLayout()->addWidget(prev);
+    m_nowPlayingPanel->controlsLayout()->addWidget(m_nowPlayingPlayButton);
+    m_nowPlayingPanel->controlsLayout()->addWidget(next);
+
+    // --- volume ---
+    m_nowPlayingMuteButton = new QToolButton();
+    m_nowPlayingMuteButton->setIcon(QIcon::fromTheme("audio-volume-high"));
+    m_nowPlayingMuteButton->setFixedSize(36, 36);
+    m_nowPlayingMuteButton->setIconSize(QSize(20, 20));
+    m_nowPlayingMuteButton->setAutoRaise(true);
+    connect(m_nowPlayingMuteButton, &QToolButton::clicked,
+            this, &MainWindow::onMuteClicked);
+            if (m_nowPlayingMuteButton)
+            m_nowPlayingMuteButton->setIcon(QIcon::fromTheme(
+                m_muted ? "audio-volume-muted" : "audio-volume-high"));
+
+    m_nowPlayingVolume = new QSlider(Qt::Horizontal);
+    m_nowPlayingVolume->setRange(0, 100);
+    m_nowPlayingVolume->setValue(100);
+    m_nowPlayingVolume->setFixedWidth(120);
+    m_nowPlayingVolume->setStyleSheet(
+        "QSlider::groove:horizontal {"
+        "  height: 3px;"
+        "  background: rgba(255,255,255,60);"
+        "  border-radius: 2px;"
+        "}"
+        "QSlider::sub-page:horizontal {"
+        "  background: white;"
+        "  border-radius: 2px;"
+        "}"
+        "QSlider::handle:horizontal {"
+        "  width: 10px; height: 10px;"
+        "  background: white;"
+        "  border-radius: 5px;"
+        "  margin: -4px 0;"
+        "}"
+    );
+
+    m_nowPlayingVolumeLabel = new QLabel("100%");
+    m_nowPlayingVolumeLabel->setStyleSheet("color: rgba(255,255,255,180); font-size: 10px;");
+    m_nowPlayingVolumeLabel->setFixedWidth(36);
+
+    connect(m_nowPlayingVolume, &QSlider::valueChanged, this, [this](int val) {
+        m_volumeSlider->setValue(val);
+        onVolumeChanged(val);
+        m_nowPlayingVolumeLabel->setText(QString("%1%").arg(val));
+    });
+
+    // sync with main volume slider
+    connect(m_volumeSlider, &QSlider::valueChanged, this, [this](int val) {
+        m_nowPlayingVolume->setValue(val);
+        m_nowPlayingVolumeLabel->setText(QString("%1%").arg(val));
+    });
+
+    m_nowPlayingPanel->volumeLayout()->addWidget(m_nowPlayingMuteButton);
+    m_nowPlayingPanel->volumeLayout()->addWidget(m_nowPlayingVolume);
+    m_nowPlayingPanel->volumeLayout()->addWidget(m_nowPlayingVolumeLabel);
+
+    // --- seekbar ---
+    SeekSlider *seekBar = m_nowPlayingPanel->seekBar();
+    seekBar->installEventFilter(this);
+
+    connect(seekBar, &QSlider::sliderPressed, this, [this]() {
+        m_seeking = true;
+    });
+    connect(seekBar, &QSlider::sliderReleased, this, [this]() {
+        m_seeking = false;
+        double duration = 0;
+        mpv_get_property(m_engine->mpvHandle(), "duration",
+            MPV_FORMAT_DOUBLE, &duration);
+        double seekTo = (m_nowPlayingPanel->seekBar()->value() / 1000.0) * duration;
+        const QString cmd = QString::number(seekTo, 'f', 2);
+        QByteArray ba = cmd.toUtf8();
+        const char *args[] = {"seek", ba.constData(), "absolute", nullptr};
+        mpv_command(m_engine->mpvHandle(), args);
+    });
+    connect(seekBar, &QSlider::sliderMoved, this, [this](int) {
+        double duration = 0;
+        mpv_get_property(m_engine->mpvHandle(), "duration",
+            MPV_FORMAT_DOUBLE, &duration);
+        double seekTo = (m_nowPlayingPanel->seekBar()->value() / 1000.0) * duration;
+        const QString cmd = QString::number(seekTo, 'f', 2);
+        QByteArray ba = cmd.toUtf8();
+        const char *args[] = {"seek", ba.constData(), "absolute", nullptr};
+        mpv_command(m_engine->mpvHandle(), args);
+    });
+    m_nowPlayingVolume->installEventFilter(this);
 }

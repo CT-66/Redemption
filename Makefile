@@ -1162,6 +1162,7 @@ build/moc/moc_playlistview.cpp: playlistview.h \
 build/moc/moc_nowplayingpanel.cpp: nowplayingpanel.h \
 		seekslider.h \
 		ambientbar.h \
+		scrollinglabel.h \
 		build/moc/moc_predefs.h \
 		/usr/lib/qt6/moc
 	/usr/lib/qt6/moc $(DEFINES) --include /home/arch/Code/Cpp/Programs/Redemption/build/moc/moc_predefs.h -I/usr/lib/qt6/mkspecs/linux-g++ -I/home/arch/Code/Cpp/Programs/Redemption -I/usr/include/taglib -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtDBus -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/include/c++/15.2.1 -I/usr/include/c++/15.2.1/x86_64-pc-linux-gnu -I/usr/include/c++/15.2.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include-fixed -I/usr/include nowplayingpanel.h -o build/moc/moc_nowplayingpanel.cpp

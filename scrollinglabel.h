@@ -32,6 +32,8 @@ public:
         m_timer->stop();
         m_waiting = true;
 
+        update();
+
         QFontMetrics fm(font());
         if (fm.horizontalAdvance(text) > width()) {
             // wait 1.5 seconds before starting scroll
@@ -51,6 +53,11 @@ public:
 
     void setAlignment(Qt::Alignment) {} // kept for compatibility
     QString text() const { return m_text; }
+
+    void showEvent(QShowEvent *e) override {
+        QWidget::showEvent(e);
+        update(); // force repaint when shown
+    }
 
     signals:
         void clicked();

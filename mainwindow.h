@@ -157,6 +157,12 @@ private:
     QWidget *m_fadeOverlay = nullptr;
     AmbientBar *m_playlistAmbient = nullptr;
 
+    void setupNowPlayingControls();
+    QToolButton *m_nowPlayingPlayButton  = nullptr;
+    QToolButton *m_nowPlayingMuteButton  = nullptr;
+    QSlider     *m_nowPlayingVolume      = nullptr;
+    QLabel      *m_nowPlayingVolumeLabel = nullptr;
+
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
