@@ -117,7 +117,8 @@ protected:
             : Qt::ArrowCursor);
     }
 
-private:
+// private:
+protected:
     QString m_text;
     int m_offset = 0;
     bool m_waiting = false;

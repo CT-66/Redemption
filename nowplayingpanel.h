@@ -13,6 +13,29 @@
 #include <QTimer>
 #include "scrollinglabel.h"
 
+class CenteredScrollingLabel : public ScrollingLabel
+{
+public:
+    explicit CenteredScrollingLabel(QWidget *parent = nullptr)
+        : ScrollingLabel(parent) {}
+
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QPainter p(this);
+        p.setFont(font());
+        p.setPen(palette().windowText().color());
+        QFontMetrics fm(font());
+        int textWidth = fm.horizontalAdvance(m_text);
+        if (textWidth <= width()) {
+            p.drawText(rect(), Qt::AlignCenter, m_text);
+        } else {
+            p.setClipRect(rect());
+            p.drawText(-m_offset, 0, textWidth + 40, height(),
+                       Qt::AlignLeft | Qt::AlignVCenter, m_text);
+        }
+    }
+};
+
 class NowPlayingPanel : public QWidget
 {
     Q_OBJECT
@@ -46,7 +69,7 @@ public:
         shadow->setColor(QColor(0, 0, 0, 180));
         m_coverLabel->setGraphicsEffect(shadow);
 
-        // // title
+        // title
         // m_titleLabel = new QLabel("No track playing");
         // m_titleLabel->setAlignment(Qt::AlignCenter);
         // m_titleLabel->setStyleSheet(
@@ -58,7 +81,8 @@ public:
         // m_artistLabel->setAlignment(Qt::AlignCenter);
         // m_artistLabel->setStyleSheet(
         //     "color: rgba(255,255,255,180); font-size: 13px;");
-        m_titleLabel = new ScrollingLabel();
+        // m_artistLabel->setWordWrap(true);
+        m_titleLabel = new CenteredScrollingLabel();
         QFont titleFont = m_titleLabel->font();
         titleFont.setPointSize(18);
         titleFont.setBold(true);
@@ -69,12 +93,12 @@ public:
          m_titleLabel->setPalette(titlePal);
         // m_titleLabel->setStyleSheet("color: white;");
         m_titleLabel->setText("No track playing");
-        qDebug() << "titleLabel palette windowText:" << m_titleLabel->palette().windowText().color();
-        qDebug() << "titleLabel text:" << m_titleLabel->text();
-        qDebug() << "titleLabel size:" << m_titleLabel->size();
+        // qDebug() << "titleLabel palette windowText:" << m_titleLabel->palette().windowText().color();
+        // qDebug() << "titleLabel text:" << m_titleLabel->text();
+        // qDebug() << "titleLabel size:" << m_titleLabel->size();
 
 
-        m_artistLabel = new ScrollingLabel();
+        m_artistLabel = new CenteredScrollingLabel();
         QFont artistFont = m_artistLabel->font();
         artistFont.setPointSize(13);
         m_artistLabel->setFont(artistFont);
@@ -85,8 +109,8 @@ public:
         // m_artistLabel->setStyleSheet("color: rgba(255,255,255,180);");
         m_artistLabel->setText("");
 
-        m_titleLabel->setFixedWidth(800);
-        m_artistLabel->setFixedWidth(800);
+        m_titleLabel->setFixedWidth(400);
+        m_artistLabel->setFixedWidth(400);
 
         // seekbar
         m_seekBar = new SeekSlider(Qt::Horizontal);
@@ -198,6 +222,7 @@ public:
         artistRow->addWidget(m_artistLabel);
         artistRow->addStretch();
 
+        /*
         layout->addStretch(2);  // more space above pushes content up
         layout->addWidget(m_coverLabel, 0, Qt::AlignCenter);
         layout->addSpacing(12);
@@ -214,6 +239,20 @@ public:
         layout->addSpacing(4);
         layout->addLayout(m_volumeLayout);
         layout->addStretch(1);  // less space below
+        */
+    // layout->addStretch(1);  // more above = higher position
+    layout->addSpacing(50);
+        layout->addWidget(m_coverLabel, 0, Qt::AlignCenter);
+        layout->addSpacing(12);
+        layout->addLayout(titleRow);  // or however your title is added
+        layout->addLayout(artistRow);
+        layout->addSpacing(16);
+        layout->addWidget(seekContainer, 0, Qt::AlignCenter);
+        layout->addSpacing(4);
+        layout->addLayout(m_controlsLayout);
+        layout->addSpacing(8);
+        layout->addLayout(m_volumeLayout);
+        layout->addStretch(1);
 
     }
 
@@ -279,7 +318,10 @@ public:
         // int sz = qBound(150, available, 500);
         int available = qMin(width(), height()) - 280; // more room for controls
         // int sz = qBound(150, available, 350); // cap at 350 max
-        int sz = qBound(150, available, 500);
+        // int sz = qBound(150, available, 500);
+        int sz = qBound(150, available, 320);
+
+        // qDebug() << "setCover sz:" << sz << "panel:" << size();
 
         if (!pixmap.isNull()) {
             QPixmap scaled = pixmap.scaled(sz, sz,
@@ -296,6 +338,7 @@ public:
             m_coverLabel->setPixmap(rounded);
         } else {
             QPixmap fallback(sz, sz);
+            QPixmap fallbackBlur(":/images/fallback.jpg");
             fallback.fill(Qt::transparent);
             QPainter p(&fallback);
             p.setRenderHint(QPainter::Antialiasing);
@@ -341,8 +384,19 @@ private:
     QHBoxLayout *m_volumeLayout = nullptr;
 
 protected:
+    // void resizeEvent(QResizeEvent *e) override {
+    //     QWidget::resizeEvent(e);
+    //     if (!m_lastCover.isNull()) {
+    //         QTimer::singleShot(10, this, [this]() {
+    //             setCover(m_lastCover);
+    //         });
+    //     }
+    // }
     void resizeEvent(QResizeEvent *e) override {
         QWidget::resizeEvent(e);
+        int labelWidth = qMin(width() - 100, 1000);
+        if (m_titleLabel) m_titleLabel->setFixedWidth(labelWidth);
+        if (m_artistLabel) m_artistLabel->setFixedWidth(labelWidth);
         if (!m_lastCover.isNull()) {
             QTimer::singleShot(10, this, [this]() {
                 setCover(m_lastCover);

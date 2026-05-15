@@ -694,10 +694,10 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
     QHBoxLayout *playlistLayout = new QHBoxLayout(m_playlistModeWidget);
     playlistLayout->setContentsMargins(0, 0, 0, 0);
     playlistLayout->setSpacing(0);
-    // playlistLayout->addWidget(m_playlistView, 35);
-    // playlistLayout->addWidget(m_nowPlayingPanel, 65);
-        playlistLayout->addWidget(m_playlistView, 28);
-    playlistLayout->addWidget(m_nowPlayingPanel, 72);
+    playlistLayout->addWidget(m_playlistView, 35);
+    playlistLayout->addWidget(m_nowPlayingPanel, 65);
+    //     playlistLayout->addWidget(m_playlistView, 40);
+    // playlistLayout->addWidget(m_nowPlayingPanel, 60);
 
     // m_playlistModeWidget->setAutoFillBackground(true);
 
@@ -902,7 +902,14 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         // painter.end();
         // m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
         // return;
-                QPixmap fallback(150, 150);
+
+         QPixmap fallbackBlur(":/images/fallback.jpg");
+        if (!fallbackBlur.isNull())
+            m_ambientBar->updateFromCover(fallbackBlur);
+        else
+            m_ambientBar->updateFromCover(QPixmap());
+
+        QPixmap fallback(150, 150);
         fallback.fill(Qt::transparent);
         QPainter painter(&fallback);
         painter.setRenderHint(QPainter::Antialiasing);
@@ -969,6 +976,22 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         // painter.end();
         // m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
         // m_ambientBar->updateFromCover(QPixmap());
+
+// use fallback image for blur if available
+QPixmap fallbackBlur(":/images/fallback.jpg");
+if (!fallbackBlur.isNull())
+    m_ambientBar->updateFromCover(fallbackBlur);
+else
+    m_ambientBar->updateFromCover(QPixmap());
+
+if (m_playlistMode) {
+    if (!fallbackBlur.isNull())
+        m_nowPlayingAmbient->updateFromCover(fallbackBlur);
+    else
+        m_nowPlayingAmbient->updateFromCover(QPixmap());
+    m_nowPlayingPanel->setCover(QPixmap());
+}
+
         QPixmap fallback(150, 150);
         fallback.fill(Qt::transparent);
         QPainter painter(&fallback);
@@ -983,7 +1006,7 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         QIcon::fromTheme("library-music-symbolic").paint(&painter, 25, 25, 100, 100);
         painter.end();
         m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
-        m_ambientBar->updateFromCover(QPixmap());
+        // m_ambientBar->updateFromCover(QPixmap());
     }
 
 }
@@ -1179,6 +1202,13 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             }
             return true;
         }
+
+        if ((key->key() == Qt::Key_I || key->key() == Qt::Key_V)
+            && key->modifiers() & Qt::ControlModifier) {
+            onViewToggled();
+            return true;
+        }
+
         switch (key->key()) {
         case Qt::Key_Space:
             onPlayPauseClicked();
@@ -1996,6 +2026,7 @@ void MainWindow::playFromPath(const QString &path)
     QStringList fullQueue = m_model->collectAudioFiles(QDir::homePath() + "/Music");
     int startIndex = fullQueue.indexOf(path);
     if (startIndex < 0) startIndex = 0;
+    m_engine->setManualChange(true);
     m_engine->playFrom(fullQueue, startIndex);
     QModelIndex treeIdx = m_model->indexForPath(path);
     if (treeIdx.isValid()) {
@@ -2335,7 +2366,7 @@ void MainWindow::resizeEvent(QResizeEvent *e)
         m_playlistAmbient->setGeometry(m_playlistView->rect());
     if (m_playlistMode && m_nowPlayingPanel && !m_currentCover.isNull())
         m_nowPlayingPanel->setCover(m_currentCover);
-        qDebug() << "coverLabel size:" << m_nowPlayingPanel->coverLabel()->size();
+        // qDebug() << "coverLabel size:" << m_nowPlayingPanel->coverLabel()->size();
 }
 
 void MainWindow::setupNowPlayingControls()

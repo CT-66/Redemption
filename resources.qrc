@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>icons/folder-closed.svg</file>
+        <file>images/fallback.jpg</file>
     </qresource>
 </RCC>
