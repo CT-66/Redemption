@@ -428,6 +428,7 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
 */
 
     m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
+    /*
     connect(m_loopButton, &QToolButton::customContextMenuRequested,
             this, [this](const QPoint &pos) {
         if (!m_loopButton->isEnabled()) return;
@@ -495,8 +496,14 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
 
         menu.exec(m_loopButton->mapToGlobal(pos));
     });
+    */
+   connect(m_loopButton, &QToolButton::customContextMenuRequested,
+            this, [this](const QPoint &) {
+        showLoopMenu(m_loopButton);
+    });
 
     m_shuffleButton->setContextMenuPolicy(Qt::CustomContextMenu);
+    /*
     connect(m_shuffleButton, &QToolButton::customContextMenuRequested,
             this, [this](const QPoint &pos) {
         if (!m_shuffleButton->isEnabled()) return;
@@ -561,6 +568,11 @@ m_loopButton->setContextMenuPolicy(Qt::CustomContextMenu);
         });
 
         menu.exec(m_shuffleButton->mapToGlobal(pos));
+    });
+    */
+   connect(m_shuffleButton, &QToolButton::customContextMenuRequested,
+            this, [this](const QPoint &) {
+        showShuffleMenu(m_shuffleButton);
     });
 
 
@@ -904,8 +916,8 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         // return;
 
          QPixmap fallbackBlur(":/images/fallback.jpg");
-          qDebug() << "fallbackBlur loaded:" << !fallbackBlur.isNull()
-                 << "size:" << fallbackBlur.size();
+        //   qDebug() << "fallbackBlur loaded:" << !fallbackBlur.isNull()
+                //  << "size:" << fallbackBlur.size();
         if (!fallbackBlur.isNull())
             m_ambientBar->updateFromCover(fallbackBlur);
         else
@@ -925,7 +937,7 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         QIcon::fromTheme("library-music-symbolic").paint(&painter, 25, 25, 100, 100);
         painter.end();
         m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
-        m_ambientBar->updateFromCover(QPixmap());
+        // m_ambientBar->updateFromCover(QPixmap());
         return;
     }
 
@@ -951,6 +963,10 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         // m_coverLabel->setPixmap(scaled);
         m_coverLabel->setPixmap(roundedPixmap(scaled, 12));
         m_ambientBar->updateFromCover(meta.cover);
+if (m_playlistMode) {
+    m_nowPlayingAmbient->updateFromCover(meta.cover);
+    m_nowPlayingPanel->setCover(meta.cover);
+}
     // } else {
     //     m_currentCover = QPixmap();
     //     QIcon fallback = QIcon::fromTheme("media-album-cover");
@@ -2457,6 +2473,7 @@ void MainWindow::resizeEvent(QResizeEvent *e)
     if (m_playlistModeWidget && centralWidget()) {
         m_playlistModeWidget->setGeometry(centralWidget()->rect());
         if (m_playlistMode) {
+            m_playlistModeWidget->raise();
             m_playlistModeWidget->repaint();
             m_nowPlayingPanel->repaint();
             m_playlistView->repaint();
@@ -2631,4 +2648,146 @@ void MainWindow::setupNowPlayingControls()
 
     m_nowPlayingPanel->extraLayout()->addWidget(m_nowPlayingLoopButton);
     m_nowPlayingPanel->extraLayout()->addWidget(m_nowPlayingShuffleButton);
+
+    m_nowPlayingLoopButton->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_nowPlayingLoopButton, &QToolButton::customContextMenuRequested,
+            this, [this](const QPoint &) {
+        showLoopMenu(m_nowPlayingLoopButton);
+    });
+
+    m_nowPlayingShuffleButton->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_nowPlayingShuffleButton, &QToolButton::customContextMenuRequested,
+            this, [this](const QPoint &) {
+        showShuffleMenu(m_nowPlayingShuffleButton);
+    });
+}
+
+void MainWindow::showLoopMenu(QToolButton *sourceBtn)
+{
+    if (!sourceBtn->isEnabled()) return;
+    QMenu menu(this);
+
+    QAction *noLoop = menu.addAction("No loop");
+    noLoop->setCheckable(true);
+    noLoop->setChecked(m_engine->loopMode() == LoopMode::None);
+    connect(noLoop, &QAction::triggered, this, [this]() {
+        m_engine->setLoopMode(LoopMode::None);
+        m_engine->setLoopTargetPath("");
+        m_engine->restoreQueue();
+        updateLoopIcon();
+        updateButtonStates();
+        m_model->setLoopState((int)LoopMode::None, "");
+        m_treeView->viewport()->update();
+        ToastNotification::show(this, "Loop off", "media-playlist-repeat");
+    });
+
+    QAction *loopTrack = menu.addAction("Loop track");
+    loopTrack->setCheckable(true);
+    loopTrack->setChecked(m_engine->loopMode() == LoopMode::Track);
+    connect(loopTrack, &QAction::triggered, this, [this]() {
+        m_engine->setShuffleMode(ShuffleMode::Off);
+        m_engine->setLoopMode(LoopMode::Track);
+        m_engine->setLoopTargetPath(m_engine->currentTrack());
+        updateLoopIcon();
+        updateShuffleIcon();
+        updateButtonStates();
+        m_model->setLoopState((int)LoopMode::Track, m_engine->currentTrack());
+        m_treeView->viewport()->update();
+        ToastNotification::show(this, "Looping track", "media-playlist-repeat-song");
+    });
+
+    QAction *loopDir = menu.addAction("Loop directory");
+    loopDir->setCheckable(true);
+    loopDir->setChecked(m_engine->loopMode() == LoopMode::Directory);
+    connect(loopDir, &QAction::triggered, this, [this]() {
+        m_engine->setShuffleMode(ShuffleMode::Off);
+        m_engine->setLoopMode(LoopMode::Directory);
+        m_engine->setLoopTargetPath(m_engine->currentDirPath());
+        updateLoopIcon();
+        updateShuffleIcon();
+        updateButtonStates();
+        m_model->setLoopState((int)LoopMode::Directory, m_engine->currentDirPath());
+        m_treeView->viewport()->update();
+        ToastNotification::show(this, "Looping directory", "media-playlist-repeat");
+    });
+
+    QAction *loopQueue = menu.addAction("Loop queue");
+    loopQueue->setCheckable(true);
+    loopQueue->setChecked(m_engine->loopMode() == LoopMode::Queue);
+    connect(loopQueue, &QAction::triggered, this, [this]() {
+        m_engine->setShuffleMode(ShuffleMode::Off);
+        m_engine->setLoopMode(LoopMode::Queue);
+        m_engine->setLoopTargetPath("");
+        m_engine->restoreQueue();
+        updateLoopIcon();
+        updateShuffleIcon();
+        updateButtonStates();
+        m_model->setLoopState((int)LoopMode::Queue, "");
+        m_treeView->viewport()->update();
+        ToastNotification::show(this, "Looping queue", "media-playlist-repeat");
+    });
+
+    menu.exec(sourceBtn->mapToGlobal(QPoint(0, sourceBtn->height())));
+}
+
+void MainWindow::showShuffleMenu(QToolButton *sourceBtn)
+{
+    if (!sourceBtn->isEnabled()) return;
+    QMenu menu(this);
+
+    QAction *shuffleOff = menu.addAction("Shuffle off");
+    shuffleOff->setCheckable(true);
+    shuffleOff->setChecked(m_engine->shuffleMode() == ShuffleMode::Off);
+    connect(shuffleOff, &QAction::triggered, this, [this]() {
+        m_engine->setShuffleMode(ShuffleMode::Off);
+        m_engine->setShuffleTargetPath("");
+        m_engine->restoreQueue();
+        updateShuffleIcon();
+        updateButtonStates();
+        m_model->setShuffleState((int)ShuffleMode::Off, "");
+        m_treeView->viewport()->update();
+        ToastNotification::show(this, "Shuffle off", "media-playlist-shuffle");
+    });
+
+    QAction *shuffleDir = menu.addAction("Shuffle directory");
+    shuffleDir->setCheckable(true);
+    shuffleDir->setChecked(m_engine->shuffleMode() == ShuffleMode::Directory);
+    connect(shuffleDir, &QAction::triggered, this, [this]() {
+        m_engine->setLoopMode(LoopMode::None);
+        m_engine->setLoopTargetPath("");
+        m_engine->setShuffleMode(ShuffleMode::Directory);
+        m_engine->setShuffleTargetPath(m_engine->currentDirPath());
+        QStringList fullQueue = m_model->collectAudioFiles(QDir::homePath() + "/Music");
+        QString current = m_engine->currentTrack();
+        int idx = fullQueue.indexOf(current);
+        m_engine->playFrom(fullQueue, idx >= 0 ? idx : 0);
+        updateLoopIcon();
+        updateShuffleIcon();
+        updateButtonStates();
+        m_model->setShuffleState((int)ShuffleMode::Directory, m_engine->currentDirPath());
+        m_treeView->viewport()->update();
+        ToastNotification::show(this, "Shuffling directory", "media-playlist-shuffle");
+    });
+
+    QAction *shuffleAll = menu.addAction("Shuffle all");
+    shuffleAll->setCheckable(true);
+    shuffleAll->setChecked(m_engine->shuffleMode() == ShuffleMode::All);
+    connect(shuffleAll, &QAction::triggered, this, [this]() {
+        m_engine->setLoopMode(LoopMode::None);
+        m_engine->setLoopTargetPath("");
+        m_engine->setShuffleMode(ShuffleMode::All);
+        m_engine->setShuffleTargetPath("");
+        QStringList fullQueue = m_model->collectAudioFiles(QDir::homePath() + "/Music");
+        QString current = m_engine->currentTrack();
+        int idx = fullQueue.indexOf(current);
+        m_engine->playFrom(fullQueue, idx >= 0 ? idx : 0);
+        updateLoopIcon();
+        updateShuffleIcon();
+        updateButtonStates();
+        m_model->setShuffleState((int)ShuffleMode::All, "");
+        m_treeView->viewport()->update();
+        ToastNotification::show(this, "Shuffling all", "media-playlist-shuffle");
+    });
+
+    menu.exec(sourceBtn->mapToGlobal(QPoint(0, sourceBtn->height())));
 }

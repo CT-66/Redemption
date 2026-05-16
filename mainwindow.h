@@ -77,6 +77,8 @@ private slots:
     void onQueueClicked();
     void onViewToggled();
     void refreshPlaylistView(const QString &dirPath);
+    void showLoopMenu(QToolButton *sourceBtn);
+    void showShuffleMenu(QToolButton *sourceBtn);
 
 private:
     // engine

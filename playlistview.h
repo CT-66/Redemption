@@ -159,7 +159,10 @@ public:
                 p.drawRoundedRect(0, 0, 40, 40, 6, 6);
                 // QIcon::fromTheme("media-album-cover").paint(&p, 8, 8, 24, 24);
                 // QIcon::fromTheme("audio-x-generic").paint(&p, 8, 8, 24, 24);
-                QIcon::fromTheme("library-music-symbolic").paint(&p, 8, 8, 24, 24);
+                // QIcon::fromTheme("library-music-symbolic").paint(&p, 8, 8, 24, 24);
+                QPixmap iconPx = QIcon::fromTheme("library-music-symbolic")
+                    .pixmap(QSize(24, 24));
+                p.drawPixmap(8, 8, iconPx);
                 item->setIcon(QIcon(placeholder));
             }
 

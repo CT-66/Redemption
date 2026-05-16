@@ -344,7 +344,7 @@ layout->addSpacing(4);
             m_coverLabel->setPixmap(rounded);
         } else {
             QPixmap fallback(sz, sz);
-            QPixmap fallbackBlur(":/images/fallback.jpg");
+            // QPixmap fallbackBlur(":/images/fallback.jpg");
             fallback.fill(Qt::transparent);
             QPainter p(&fallback);
             p.setRenderHint(QPainter::Antialiasing);
