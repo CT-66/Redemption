@@ -157,6 +157,9 @@ public:
         m_volumeLayout = new QHBoxLayout();
         m_volumeLayout->setAlignment(Qt::AlignCenter);
 
+        m_extraLayout = new QHBoxLayout();
+        m_extraLayout->setAlignment(Qt::AlignCenter);
+
         // QVBoxLayout *layout = new QVBoxLayout(this);
         // layout->setAlignment(Qt::AlignCenter);
         // layout->addStretch();
@@ -251,6 +254,8 @@ public:
         layout->addSpacing(4);
         layout->addLayout(m_controlsLayout);
         layout->addSpacing(8);
+layout->addLayout(m_extraLayout);  // loop/shuffle go here
+layout->addSpacing(4);
         layout->addLayout(m_volumeLayout);
         layout->addStretch(1);
 
@@ -316,7 +321,8 @@ public:
         m_lastCover = pixmap;
         // int available = qMin(width(), height()) - 150;
         // int sz = qBound(150, available, 500);
-        int available = qMin(width(), height()) - 280; // more room for controls
+        // int available = qMin(width(), height()) - 280; // more room for controls
+        int available = qMin(width(), height()) - 380; // more room for controls
         // int sz = qBound(150, available, 350); // cap at 350 max
         // int sz = qBound(150, available, 500);
         int sz = qBound(150, available, 320);
@@ -370,6 +376,8 @@ public:
         QLabel *elapsedLabel() const { return m_elapsedLabel; }
         QLabel *remainingLabel() const { return m_remainingLabel; }
 
+        QHBoxLayout *extraLayout() const { return m_extraLayout; }
+
 private:
     QLabel *m_coverLabel = nullptr;
     // QLabel *m_titleLabel = nullptr;
@@ -382,6 +390,8 @@ private:
     QHBoxLayout *m_controlsLayout = nullptr;
     QPixmap m_lastCover;
     QHBoxLayout *m_volumeLayout = nullptr;
+
+    QHBoxLayout *m_extraLayout = nullptr;
 
 protected:
     // void resizeEvent(QResizeEvent *e) override {

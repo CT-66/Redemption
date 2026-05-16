@@ -904,6 +904,8 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         // return;
 
          QPixmap fallbackBlur(":/images/fallback.jpg");
+          qDebug() << "fallbackBlur loaded:" << !fallbackBlur.isNull()
+                 << "size:" << fallbackBlur.size();
         if (!fallbackBlur.isNull())
             m_ambientBar->updateFromCover(fallbackBlur);
         else
@@ -1420,6 +1422,11 @@ void MainWindow::updateLoopIcon()
     }
     m_loopButton->setToolTip(tooltip);
 
+    if (m_nowPlayingLoopButton) {
+        m_nowPlayingLoopButton->setIcon(m_loopButton->icon());
+        m_nowPlayingLoopButton->setToolTip(tooltip);
+    }
+
 }
 
 void MainWindow::updateShuffleIcon()
@@ -1452,6 +1459,11 @@ void MainWindow::updateShuffleIcon()
         m_shuffleButton->setIcon(icon);
     }
     m_shuffleButton->setToolTip(tooltip);
+
+    if (m_nowPlayingShuffleButton) {
+        m_nowPlayingShuffleButton->setIcon(m_shuffleButton->icon());
+        m_nowPlayingShuffleButton->setToolTip(tooltip);
+    }
 }
 
 void MainWindow::onLoopClicked()
@@ -1599,11 +1611,54 @@ void MainWindow::buildSearchIndex()
 //         }
 //     }
 // }
+// void MainWindow::onSearchClicked()
+// {
+//     SearchDialog dialog(m_searchIndex, this, !m_indexReady);
+//     if (dialog.exec() == QDialog::Accepted)
+//         playFromPath(dialog.selectedPath());
+//     m_treeView->setFocus();
+//     // clear focus from all buttons
+//     m_playButton->clearFocus();
+//     m_prevButton->clearFocus();
+//     m_nextButton->clearFocus();
+//     m_searchButton->clearFocus();
+//     m_viewToggleButton->clearFocus();
+// }
 void MainWindow::onSearchClicked()
 {
     SearchDialog dialog(m_searchIndex, this, !m_indexReady);
-    if (dialog.exec() == QDialog::Accepted)
-        playFromPath(dialog.selectedPath());
+    if (dialog.exec() == QDialog::Accepted) {
+        QString path = dialog.selectedPath();
+        QString clickedDir = QFileInfo(path).absolutePath();
+
+        // reset loop directory if outside
+        if ((m_engine->loopMode() == LoopMode::Directory ||
+             m_engine->loopMode() == LoopMode::DirectoryRecursive) &&
+            !clickedDir.startsWith(m_engine->loopTargetPath())) {
+            m_engine->setLoopMode(LoopMode::None);
+            m_engine->setLoopTargetPath("");
+            updateLoopIcon();
+            updateButtonStates();
+            m_model->setLoopState((int)LoopMode::None, "");
+            m_treeView->viewport()->update();
+    ToastNotification::show(this, "Loop removed", "media-playlist-repeat");
+        }
+
+        // reset shuffle directory if outside
+        if (m_engine->shuffleMode() == ShuffleMode::Directory &&
+            clickedDir != m_engine->shuffleTargetPath()) {
+            m_engine->setShuffleMode(ShuffleMode::Off);
+            m_engine->setShuffleTargetPath("");
+            m_engine->restoreQueue();
+            updateShuffleIcon();
+            updateButtonStates();
+            m_model->setShuffleState((int)ShuffleMode::Off, "");
+            m_treeView->viewport()->update();
+    ToastNotification::show(this, "Shuffle removed", "media-playlist-shuffle");
+        }
+
+        playFromPath(path);
+    }
     m_treeView->setFocus();
     // clear focus from all buttons
     m_playButton->clearFocus();
@@ -2022,11 +2077,26 @@ void MainWindow::onArtistClicked()
 void MainWindow::playFromPath(const QString &path)
 {
     if (path.isEmpty()) return;
+
     m_engine->setCurrentDirPath(QFileInfo(path).absolutePath());
     QStringList fullQueue = m_model->collectAudioFiles(QDir::homePath() + "/Music");
     int startIndex = fullQueue.indexOf(path);
     if (startIndex < 0) startIndex = 0;
+
+    QString clickedDir = QFileInfo(path).absolutePath();
+    if (m_engine->shuffleMode() == ShuffleMode::Directory &&
+        clickedDir != m_engine->shuffleTargetPath()) {
+        m_engine->setShuffleMode(ShuffleMode::Off);
+        m_engine->setShuffleTargetPath("");
+        m_engine->restoreQueue();
+        updateShuffleIcon();
+        updateButtonStates();
+        m_model->setShuffleState((int)ShuffleMode::Off, "");
+        m_treeView->viewport()->update();
+    }
+
     m_engine->setManualChange(true);
+    m_engine->setCurrentDirPath(clickedDir);
     m_engine->playFrom(fullQueue, startIndex);
     QModelIndex treeIdx = m_model->indexForPath(path);
     if (treeIdx.isValid()) {
@@ -2072,6 +2142,11 @@ void MainWindow::updateButtonStates()
     m_shuffleButton->setEnabled(!loopActive);
     m_loopButton->setEnabled(!shuffleActive);
     m_queueButton->setEnabled(shuffleActive);
+
+    if (m_nowPlayingLoopButton)
+        m_nowPlayingLoopButton->setEnabled(!shuffleActive);
+    if (m_nowPlayingShuffleButton)
+        m_nowPlayingShuffleButton->setEnabled(!loopActive);
 
 }
 
@@ -2351,22 +2426,50 @@ void MainWindow::resizeEvent(QResizeEvent *e)
 }
 */
 
+// void MainWindow::resizeEvent(QResizeEvent *e)
+// {
+//     QMainWindow::resizeEvent(e);
+//     if (m_playlistModeWidget && centralWidget())
+//         m_playlistModeWidget->resize(centralWidget()->size());
+// m_playlistModeWidget->update();
+//     if (m_fadeOverlay && centralWidget())
+//         m_fadeOverlay->setGeometry(centralWidget()->rect());
+//     if (m_nowPlayingAmbient && m_nowPlayingPanel)
+//         m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+//     if (m_playlistMode && m_nowPlayingPanel && !m_currentCover.isNull())
+//         m_nowPlayingPanel->setCover(m_currentCover);
+//     if (m_playlistAmbient && m_playlistView)
+//         m_playlistAmbient->setGeometry(m_playlistView->rect());
+//     if (m_playlistMode && m_nowPlayingPanel && !m_currentCover.isNull())
+//         m_nowPlayingPanel->setCover(m_currentCover);
+// if (m_playlistMode) {
+// m_playlistModeWidget->setGeometry(centralWidget()->rect());
+// m_playlistModeWidget->repaint();
+// m_nowPlayingPanel->repaint();
+// m_playlistView->repaint();
+// }
+//         // qDebug() << "coverLabel size:" << m_nowPlayingPanel->coverLabel()->size();
+// }
+
 void MainWindow::resizeEvent(QResizeEvent *e)
 {
     QMainWindow::resizeEvent(e);
-    if (m_playlistModeWidget && centralWidget())
-        m_playlistModeWidget->resize(centralWidget()->size());
+    if (m_playlistModeWidget && centralWidget()) {
+        m_playlistModeWidget->setGeometry(centralWidget()->rect());
+        if (m_playlistMode) {
+            m_playlistModeWidget->repaint();
+            m_nowPlayingPanel->repaint();
+            m_playlistView->repaint();
+        }
+    }
     if (m_fadeOverlay && centralWidget())
         m_fadeOverlay->setGeometry(centralWidget()->rect());
     if (m_nowPlayingAmbient && m_nowPlayingPanel)
         m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
-    if (m_playlistMode && m_nowPlayingPanel && !m_currentCover.isNull())
-        m_nowPlayingPanel->setCover(m_currentCover);
     if (m_playlistAmbient && m_playlistView)
         m_playlistAmbient->setGeometry(m_playlistView->rect());
     if (m_playlistMode && m_nowPlayingPanel && !m_currentCover.isNull())
         m_nowPlayingPanel->setCover(m_currentCover);
-        // qDebug() << "coverLabel size:" << m_nowPlayingPanel->coverLabel()->size();
 }
 
 void MainWindow::setupNowPlayingControls()
@@ -2375,6 +2478,9 @@ void MainWindow::setupNowPlayingControls()
     QToolButton *prev = new QToolButton();
     m_nowPlayingPlayButton = new QToolButton();
     QToolButton *next = new QToolButton();
+
+    QToolButton *loopBtn = new QToolButton();
+    QToolButton *shuffleBtn = new QToolButton();
 
     prev->setIcon(QIcon::fromTheme("media-skip-backward"));
     m_nowPlayingPlayButton->setIcon(QIcon::fromTheme("media-playback-pause"));
@@ -2478,4 +2584,51 @@ void MainWindow::setupNowPlayingControls()
         mpv_command(m_engine->mpvHandle(), args);
     });
     m_nowPlayingVolume->installEventFilter(this);
+
+    //////
+    loopBtn->setFixedSize(44, 44);
+    loopBtn->setIconSize(QSize(22, 22));
+    loopBtn->setAutoRaise(true);
+    shuffleBtn->setFixedSize(44, 44);
+    shuffleBtn->setIconSize(QSize(22, 22));
+    shuffleBtn->setAutoRaise(true);
+
+
+    // sync icons with main buttons
+    loopBtn->setIcon(m_loopButton->icon());
+    shuffleBtn->setIcon(m_shuffleButton->icon());
+
+    connect(loopBtn, &QToolButton::clicked, this, &MainWindow::onLoopClicked);
+    connect(shuffleBtn, &QToolButton::clicked, this, &MainWindow::onShuffleClicked);
+
+    // // keep icons in sync when main buttons change
+    // connect(m_loopButton, &QToolButton::iconChanged, loopBtn, &QToolButton::setIcon);  // doesn't exist
+
+    m_nowPlayingLoopButton = new QToolButton();
+    m_nowPlayingShuffleButton = new QToolButton();
+
+    m_nowPlayingLoopButton->setIcon(m_loopButton->icon());
+    m_nowPlayingShuffleButton->setIcon(m_shuffleButton->icon());
+    m_nowPlayingLoopButton->setToolTip(m_loopButton->toolTip());
+    m_nowPlayingShuffleButton->setToolTip(m_shuffleButton->toolTip());
+
+    for (auto *btn : {m_nowPlayingLoopButton, m_nowPlayingShuffleButton}) {
+        btn->setFixedSize(44, 44);
+        btn->setIconSize(QSize(22, 22));
+        btn->setAutoRaise(true);
+    }
+
+    connect(m_nowPlayingLoopButton, &QToolButton::clicked,
+            this, &MainWindow::onLoopClicked);
+    connect(m_nowPlayingShuffleButton, &QToolButton::clicked,
+            this, &MainWindow::onShuffleClicked);
+
+    // add to a row between controls and volume
+    QHBoxLayout *loopShuffleRow = new QHBoxLayout();
+    loopShuffleRow->setAlignment(Qt::AlignCenter);
+    loopShuffleRow->addWidget(m_nowPlayingLoopButton);
+    loopShuffleRow->addWidget(m_nowPlayingShuffleButton);
+
+    m_nowPlayingPanel->extraLayout()->addWidget(m_nowPlayingLoopButton);
+    m_nowPlayingPanel->extraLayout()->addWidget(m_nowPlayingShuffleButton);
 }

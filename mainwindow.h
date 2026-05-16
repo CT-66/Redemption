@@ -163,6 +163,9 @@ private:
     QSlider     *m_nowPlayingVolume      = nullptr;
     QLabel      *m_nowPlayingVolumeLabel = nullptr;
 
+    QToolButton *m_nowPlayingLoopButton   = nullptr;
+    QToolButton *m_nowPlayingShuffleButton = nullptr;
+
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
