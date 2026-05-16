@@ -13,6 +13,7 @@
 #include <QFutureWatcher>
 #include <vector>
 #include <cstring>
+#include <QPointer>
 
 static void blurH(float *buf, int w, int h, int r)
 {
@@ -243,18 +244,45 @@ private:
     QFutureWatcher<QPair<QImage, QColor>> *m_watcher = nullptr;
     int m_darkOverlay = 110;
 
+    // void startFade()
+    // {
+    //     m_fadeOpacity = 0.0f;
+    //     m_fadeTimer = new QTimer(this);
+    //     m_fadeTimer->setInterval(16);
+    //     connect(m_fadeTimer, &QTimer::timeout, this, [this]() {
+    //         m_fadeOpacity += 0.04f;
+    //         if (m_fadeOpacity >= 1.0f) {
+    //             m_fadeOpacity = 1.0f;
+    //             m_fadeTimer->stop();
+    //             m_fadeTimer->deleteLater();
+    //             m_fadeTimer = nullptr;
+    //             m_previousImage = QImage();
+    //         }
+    //         update();
+    //     });
+    //     m_fadeTimer->start();
+    // }
     void startFade()
     {
         m_fadeOpacity = 0.0f;
+        if (m_fadeTimer) {
+            m_fadeTimer->stop();
+            delete m_fadeTimer;  // delete immediately instead of deleteLater
+            m_fadeTimer = nullptr;
+        }
         m_fadeTimer = new QTimer(this);
         m_fadeTimer->setInterval(16);
-        connect(m_fadeTimer, &QTimer::timeout, this, [this]() {
+        QPointer<AmbientBar> guard(this);  // guard against deletion
+        connect(m_fadeTimer, &QTimer::timeout, this, [this, guard]() {
+            if (!guard) return;  // widget was deleted
             m_fadeOpacity += 0.04f;
             if (m_fadeOpacity >= 1.0f) {
                 m_fadeOpacity = 1.0f;
-                m_fadeTimer->stop();
-                m_fadeTimer->deleteLater();
-                m_fadeTimer = nullptr;
+                if (m_fadeTimer) {
+                    m_fadeTimer->stop();
+                    delete m_fadeTimer;
+                    m_fadeTimer = nullptr;
+                }
                 m_previousImage = QImage();
             }
             update();

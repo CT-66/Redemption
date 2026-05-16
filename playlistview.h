@@ -189,6 +189,116 @@ public:
         }
     }
 
+    /*
+    void loadQueue(const QStringList &queue, const QString &currentTrack)
+    {
+        m_listWidget->clear();
+        m_currentDir = ""; // not a directory view
+        m_dirLabel->setText("Queue");
+
+        for (const QString &path : queue) {
+            TrackMetadata meta = MetadataReader::read(path);
+            QString title = meta.hasTitle ? meta.title : QFileInfo(path).fileName();
+
+            QListWidgetItem *item = new QListWidgetItem(title);
+            item->setData(Qt::UserRole, path);
+
+            if (meta.hasCover) {
+                QPixmap thumb = meta.cover.scaled(40, 40,
+                    Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                QPixmap rounded(40, 40);
+                rounded.fill(Qt::transparent);
+                QPainter p(&rounded);
+                p.setRenderHint(QPainter::Antialiasing);
+                QPainterPath path2;
+                path2.addRoundedRect(0, 0, 40, 40, 6, 6);
+                p.setClipPath(path2);
+                p.drawPixmap(0, 0, thumb);
+                item->setIcon(QIcon(rounded));
+            } else {
+                QPixmap placeholder(40, 40);
+                placeholder.fill(Qt::transparent);
+                QPainter p(&placeholder);
+                p.setRenderHint(QPainter::Antialiasing);
+                p.setBrush(QColor(255, 255, 255, 30));
+                p.setPen(Qt::NoPen);
+                p.drawRoundedRect(0, 0, 40, 40, 6, 6);
+                QPixmap iconPx = QIcon::fromTheme("audio-x-generic")
+                    .pixmap(QSize(24, 24));
+                p.drawPixmap(8, 8, iconPx);
+                item->setIcon(QIcon(placeholder));
+            }
+
+            m_listWidget->addItem(item);
+        }
+        updateCurrentTrack(currentTrack);
+    }
+    */
+   void loadQueue(const QStringList &queue, const QString &currentTrack,
+                   int windowSize = 20)
+    {
+        m_listWidget->clear();
+        m_currentDir = "";
+        m_dirLabel->setText("Queue");
+
+        // find current track position
+        int currentIdx = queue.indexOf(currentTrack);
+        if (currentIdx < 0) currentIdx = 0;
+
+        // show windowSize items centered around current
+        int start = qMax(0, currentIdx - 2); // show 2 before current
+        int end = qMin(queue.size(), start + windowSize);
+        // adjust start if end hit the limit
+        start = qMax(0, end - windowSize);
+
+        for (int i = start; i < end; i++) {
+            const QString &path = queue[i];
+            TrackMetadata meta = MetadataReader::read(path);
+            QString title = meta.hasTitle
+                ? meta.title : QFileInfo(path).fileName();
+
+            QListWidgetItem *item = new QListWidgetItem(title);
+            item->setData(Qt::UserRole, path);
+
+            // position indicator
+            if (i == currentIdx) {
+                QFont f = item->font();
+                f.setBold(true);
+                item->setFont(f);
+            }
+
+            if (meta.hasCover) {
+                QPixmap thumb = meta.cover.scaled(40, 40,
+                    Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                QPixmap rounded(40, 40);
+                rounded.fill(Qt::transparent);
+                QPainter p(&rounded);
+                p.setRenderHint(QPainter::Antialiasing);
+                QPainterPath path2;
+                path2.addRoundedRect(0, 0, 40, 40, 6, 6);
+                p.setClipPath(path2);
+                p.drawPixmap(0, 0, thumb);
+                item->setIcon(QIcon(rounded));
+            } else {
+                QPixmap placeholder(40, 40);
+                placeholder.fill(Qt::transparent);
+                QPainter p(&placeholder);
+                p.setRenderHint(QPainter::Antialiasing);
+                p.setBrush(QColor(255, 255, 255, 30));
+                p.setPen(Qt::NoPen);
+                p.drawRoundedRect(0, 0, 40, 40, 6, 6);
+                QPixmap iconPx = QIcon::fromTheme("audio-x-generic")
+                    .pixmap(QSize(24, 24));
+                p.drawPixmap(8, 8, iconPx);
+                item->setIcon(QIcon(placeholder));
+            }
+
+            m_listWidget->addItem(item);
+        }
+
+        updateCurrentTrack(currentTrack);
+    }
+
     QToolButton *switchButton() const { return m_switchButton; }
     QToolButton *searchButton() const { return m_searchButton; }
     QListWidget *listWidget() const { return m_listWidget; }

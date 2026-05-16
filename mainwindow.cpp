@@ -919,6 +919,7 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         //   qDebug() << "fallbackBlur loaded:" << !fallbackBlur.isNull()
                 //  << "size:" << fallbackBlur.size();
         if (!fallbackBlur.isNull())
+            // qDebug() << "updating ambient with fallback, size:" << fallbackBlur.size();
             m_ambientBar->updateFromCover(fallbackBlur);
         else
             m_ambientBar->updateFromCover(QPixmap());
@@ -963,10 +964,11 @@ void MainWindow::updateNowPlaying(const QString &filePath)
         // m_coverLabel->setPixmap(scaled);
         m_coverLabel->setPixmap(roundedPixmap(scaled, 12));
         m_ambientBar->updateFromCover(meta.cover);
-if (m_playlistMode) {
-    m_nowPlayingAmbient->updateFromCover(meta.cover);
-    m_nowPlayingPanel->setCover(meta.cover);
-}
+        if (m_playlistMode) {
+            m_nowPlayingAmbient->updateFromCover(meta.cover);
+            m_playlistAmbient->updateFromCover(meta.cover);
+            m_nowPlayingPanel->setCover(meta.cover);
+        }
     // } else {
     //     m_currentCover = QPixmap();
     //     QIcon fallback = QIcon::fromTheme("media-album-cover");
@@ -995,20 +997,33 @@ if (m_playlistMode) {
         // m_coverLabel->setPixmap(roundedPixmap(fallback, 12));
         // m_ambientBar->updateFromCover(QPixmap());
 
-// use fallback image for blur if available
-QPixmap fallbackBlur(":/images/fallback.jpg");
-if (!fallbackBlur.isNull())
-    m_ambientBar->updateFromCover(fallbackBlur);
-else
-    m_ambientBar->updateFromCover(QPixmap());
+        // use fallback image for blur if available
+        QPixmap fallbackBlur(":/images/fallback.jpg");
+        if (!fallbackBlur.isNull()) {
+            // qDebug() << "updating ambient with fallback, size:" << fallbackBlur.size();
+            // m_ambientBar->updateFromCover(fallbackBlur);
+            QPixmap scaled = fallbackBlur.scaled(900, 600,
+                        Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            m_ambientBar->updateFromCover(scaled);
+            if (m_playlistMode)
+                m_nowPlayingAmbient->updateFromCover(scaled);
+                m_playlistAmbient->updateFromCover(scaled);
+            } else {
+            m_ambientBar->updateFromCover(QPixmap());
+            if (m_playlistMode)
+                m_nowPlayingAmbient->updateFromCover(QPixmap());
+                m_playlistAmbient->updateFromCover(QPixmap());
+            }
 
-if (m_playlistMode) {
-    if (!fallbackBlur.isNull())
-        m_nowPlayingAmbient->updateFromCover(fallbackBlur);
-    else
-        m_nowPlayingAmbient->updateFromCover(QPixmap());
-    m_nowPlayingPanel->setCover(QPixmap());
-}
+        // if (m_playlistMode) {
+        //     if (!fallbackBlur.isNull())
+        //         m_nowPlayingAmbient->updateFromCover(fallbackBlur);
+        //     else
+        //         m_nowPlayingAmbient->updateFromCover(QPixmap());
+        //     m_nowPlayingPanel->setCover(QPixmap());
+        // }
+        if (m_playlistMode)
+            m_nowPlayingPanel->setCover(QPixmap());
 
         QPixmap fallback(150, 150);
         fallback.fill(Qt::transparent);
@@ -1275,6 +1290,11 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         case Qt::Key_Slash:
             onSearchClicked();
             return true;
+
+        case Qt::Key_Backslash:
+            onViewToggled();
+            return true;
+
         default:
             break;
         }
@@ -1575,6 +1595,9 @@ void MainWindow::onShuffleClicked()
         m_engine->shuffleTargetPath());
     m_treeView->viewport()->update();
     updateButtonStates();
+
+    if (m_playlistMode)
+        refreshPlaylistView(m_engine->currentDirPath());
 }
 
 
@@ -2347,7 +2370,7 @@ void MainWindow::onViewToggled()
         m_nowPlayingPanel->setArtist(m_artistLabel->text());
         m_nowPlayingPanel->setCover(m_currentCover);
         // m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
-        m_nowPlayingAmbient->updateFromCover(m_currentCover);
+        // m_nowPlayingAmbient->updateFromCover(m_currentCover);
 
         m_playlistModeWidget->move(0, 0);
         m_playlistModeWidget->resize(centralWidget()->size());
@@ -2358,7 +2381,17 @@ void MainWindow::onViewToggled()
         m_playlistModeWidget->raise();
         m_ambientBar->lower();
 
-    m_playlistAmbient->updateFromCover(m_currentCover);
+    // m_playlistAmbient->updateFromCover(m_currentCover);
+
+    QPixmap coverForAmbient = m_currentCover;
+        if (coverForAmbient.isNull()) {
+            QPixmap fallback(":/images/fallback.jpg");
+            if (!fallback.isNull())
+                coverForAmbient = fallback.scaled(900, 600,
+                    Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        }
+        m_nowPlayingAmbient->updateFromCover(coverForAmbient);
+        m_playlistAmbient->updateFromCover(coverForAmbient);
 
     QTimer::singleShot(50, this, [this]() {
         m_nowPlayingPanel->setCover(m_currentCover);
@@ -2418,10 +2451,21 @@ void MainWindow::onViewToggled()
     }
 }
 
+// void MainWindow::refreshPlaylistView(const QString &dirPath)
+// {
+//     if (dirPath.isEmpty()) return;
+//     m_playlistView->loadDirectory(dirPath, m_engine->currentTrack());
+// }
 void MainWindow::refreshPlaylistView(const QString &dirPath)
 {
     if (dirPath.isEmpty()) return;
-    m_playlistView->loadDirectory(dirPath, m_engine->currentTrack());
+
+    if (m_engine->shuffleMode() != ShuffleMode::Off) {
+        // show shuffled queue
+        m_playlistView->loadQueue(m_engine->queue(), m_engine->currentTrack());
+    } else {
+        m_playlistView->loadDirectory(dirPath, m_engine->currentTrack());
+    }
 }
 
 
@@ -2746,6 +2790,8 @@ void MainWindow::showShuffleMenu(QToolButton *sourceBtn)
         updateButtonStates();
         m_model->setShuffleState((int)ShuffleMode::Off, "");
         m_treeView->viewport()->update();
+if (m_playlistMode)
+    refreshPlaylistView(m_engine->currentDirPath());
         ToastNotification::show(this, "Shuffle off", "media-playlist-shuffle");
     });
 
@@ -2766,6 +2812,8 @@ void MainWindow::showShuffleMenu(QToolButton *sourceBtn)
         updateButtonStates();
         m_model->setShuffleState((int)ShuffleMode::Directory, m_engine->currentDirPath());
         m_treeView->viewport()->update();
+if (m_playlistMode)
+    refreshPlaylistView(m_engine->currentDirPath());
         ToastNotification::show(this, "Shuffling directory", "media-playlist-shuffle");
     });
 
@@ -2786,8 +2834,27 @@ void MainWindow::showShuffleMenu(QToolButton *sourceBtn)
         updateButtonStates();
         m_model->setShuffleState((int)ShuffleMode::All, "");
         m_treeView->viewport()->update();
+if (m_playlistMode)
+    refreshPlaylistView(m_engine->currentDirPath());
         ToastNotification::show(this, "Shuffling all", "media-playlist-shuffle");
     });
 
     menu.exec(sourceBtn->mapToGlobal(QPoint(0, sourceBtn->height())));
 }
+
+void MainWindow::changeEvent(QEvent *e)
+{
+    QMainWindow::changeEvent(e);
+    if (e->type() == QEvent::WindowStateChange && m_playlistMode) {
+        QTimer::singleShot(100, this, [this]() {
+            m_playlistModeWidget->setGeometry(centralWidget()->rect());
+            m_playlistModeWidget->raise();
+            m_playlistAmbient->setGeometry(m_playlistView->rect());
+            m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+            if (!m_currentCover.isNull())
+                m_nowPlayingPanel->setCover(m_currentCover);
+            m_playlistModeWidget->update();
+        });
+    }
+}
+

@@ -30,6 +30,8 @@ HEADERS += \
     playlistview.h \
     nowplayingpanel.h
 
+RESOURCES += resources.qrc
+
 # mpv
 LIBS += -lmpv
 
