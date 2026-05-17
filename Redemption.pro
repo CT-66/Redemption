@@ -44,7 +44,7 @@ MOC_DIR = build/moc
 RCC_DIR = build/rcc
 UI_DIR = build/ui
 
-target.path = /usr/bin
+target.path = /usr/local/bin
 desktop.path = /usr/share/applications
 desktop.files = redemption.desktop
 icon.path = /usr/share/icons/hicolor/scalable/apps
