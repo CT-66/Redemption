@@ -14,8 +14,8 @@
 #include <QHoverEvent>
 #include <QPainterPath>
 #include <QDebug>
-#include <malloc.h>
 #include <QPixmapCache>
+#include <malloc.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -75,7 +75,16 @@ MainWindow::MainWindow(QWidget *parent)
     updateLoopIcon();
     updateShuffleIcon();
     updateButtonStates();
-setupNowPlayingControls();
+
+    setupNowPlayingControls();
+    QTimer *gcTimer = new QTimer(this);
+    gcTimer->setInterval(5 * 60 * 1000);
+    connect(gcTimer, &QTimer::timeout, this, []() {
+        QPixmapCache::clear();
+        malloc_trim(0);
+    });
+    gcTimer->start();
+
     setupTray();
     // buildSearchIndex();
     // QTimer::singleShot(100, this, [this]() {

@@ -134,8 +134,11 @@ public:
             QListWidgetItem *item = new QListWidgetItem(title);
             item->setData(Qt::UserRole, info.filePath());
 
+            if (m_thumbnailCache.contains(info.filePath())) {
+                item->setIcon(m_thumbnailCache[info.filePath()]);
+            }
             // cover thumbnail
-            if (meta.hasCover) {
+            else if (meta.hasCover) {
                 QPixmap thumb = meta.cover.scaled(40, 40,
                     Qt::KeepAspectRatio, Qt::SmoothTransformation);
                 // round the thumbnail
@@ -143,11 +146,14 @@ public:
                 rounded.fill(Qt::transparent);
                 QPainter p(&rounded);
                 p.setRenderHint(QPainter::Antialiasing);
-                QPainterPath path;
-                path.addRoundedRect(0, 0, 40, 40, 6, 6);
-                p.setClipPath(path);
+                QPainterPath clipPath;
+                clipPath.addRoundedRect(0, 0, 40, 40, 6, 6);
+                p.setClipPath(clipPath);
                 p.drawPixmap(0, 0, thumb);
-                item->setIcon(QIcon(rounded));
+                QIcon icon(rounded);
+                m_thumbnailCache[info.filePath()] = icon;
+                // item->setIcon(QIcon(rounded));
+                item->setIcon(icon);
             } else {
                 // item->setIcon(QIcon::fromTheme("media-album-cover"));
                 QPixmap placeholder(40, 40);
@@ -163,7 +169,10 @@ public:
                 QPixmap iconPx = QIcon::fromTheme("library-music-symbolic")
                     .pixmap(QSize(24, 24));
                 p.drawPixmap(8, 8, iconPx);
-                item->setIcon(QIcon(placeholder));
+                QIcon icon(placeholder);
+                m_thumbnailCache[info.filePath()] = icon;
+                // item->setIcon(QIcon(placeholder));
+                item->setIcon(icon);
             }
 
             m_listWidget->addItem(item);
@@ -267,7 +276,10 @@ public:
                 item->setFont(f);
             }
 
-            if (meta.hasCover) {
+            if (m_thumbnailCache.contains(path)) {
+                item->setIcon(m_thumbnailCache[path]);
+            }
+            else if (meta.hasCover) {
                 QPixmap thumb = meta.cover.scaled(40, 40,
                     Qt::KeepAspectRatio, Qt::SmoothTransformation);
                 QPixmap rounded(40, 40);
@@ -278,7 +290,10 @@ public:
                 path2.addRoundedRect(0, 0, 40, 40, 6, 6);
                 p.setClipPath(path2);
                 p.drawPixmap(0, 0, thumb);
-                item->setIcon(QIcon(rounded));
+                QIcon icon(rounded);
+                m_thumbnailCache[path] = icon;
+                // item->setIcon(QIcon(rounded));
+                item->setIcon(icon);
             } else {
                 QPixmap placeholder(40, 40);
                 placeholder.fill(Qt::transparent);
@@ -290,7 +305,10 @@ public:
                 QPixmap iconPx = QIcon::fromTheme("audio-x-generic")
                     .pixmap(QSize(24, 24));
                 p.drawPixmap(8, 8, iconPx);
-                item->setIcon(QIcon(placeholder));
+                QIcon icon(placeholder);
+                m_thumbnailCache[path] = icon;
+                // item->setIcon(QIcon(placeholder));
+                item->setIcon(icon);
             }
 
             m_listWidget->addItem(item);
