@@ -244,7 +244,10 @@ public:
         layout->addStretch(1);  // less space below
         */
     // layout->addStretch(1);  // more above = higher position
-    layout->addSpacing(50);
+    // layout->addSpacing(50);
+    // layout->addSpacing(isMaximized() ? 100 : 30);
+    // layout->setContentsMargins(20, 50, 20, 0);
+    layout->setContentsMargins(20, 30, 20, 0);
         layout->addWidget(m_coverLabel, 0, Qt::AlignCenter);
         layout->addSpacing(12);
         layout->addLayout(titleRow);  // or however your title is added
@@ -322,10 +325,14 @@ layout->addSpacing(4);
         // int available = qMin(width(), height()) - 150;
         // int sz = qBound(150, available, 500);
         // int available = qMin(width(), height()) - 280; // more room for controls
-        int available = qMin(width(), height()) - 380; // more room for controls
+        // int available = qMin(width(), height()) - 380; // more room for controls
         // int sz = qBound(150, available, 350); // cap at 350 max
         // int sz = qBound(150, available, 500);
-        int sz = qBound(150, available, 320);
+        // int sz = qBound(150, available, 320);
+        // int available = qMin(width(), height()) - 280;
+        // int sz = qBound(200, available, 380);
+        int available = qMin(width(), height()) - 320;
+        int sz = qBound(200, available, 320);
 
         // qDebug() << "setCover sz:" << sz << "panel:" << size();
 
@@ -359,6 +366,9 @@ layout->addSpacing(4);
         }
     }
 
+            void setMaximized(bool maximized) {
+        m_isMaximized = maximized;
+        }
     // void setTitle(const QString &title) { m_titleLabel->setText(title); }
     // void setArtist(const QString &artist) { m_artistLabel->setText(artist); }
     void setTitle(const QString &title) { m_titleLabel->setText(title); }
@@ -392,6 +402,7 @@ private:
     QHBoxLayout *m_volumeLayout = nullptr;
 
     QHBoxLayout *m_extraLayout = nullptr;
+    bool m_isMaximized = false;
 
 protected:
     // void resizeEvent(QResizeEvent *e) override {
@@ -402,8 +413,22 @@ protected:
     //         });
     //     }
     // }
+    // void resizeEvent(QResizeEvent *e) override {
+    //     QWidget::resizeEvent(e);
+    //     int labelWidth = qMin(width() - 100, 1000);
+    //     if (m_titleLabel) m_titleLabel->setFixedWidth(labelWidth);
+    //     if (m_artistLabel) m_artistLabel->setFixedWidth(labelWidth);
+    //     if (!m_lastCover.isNull()) {
+    //         QTimer::singleShot(10, this, [this]() {
+    //             setCover(m_lastCover);
+    //         });
+    //     }
+    // }
     void resizeEvent(QResizeEvent *e) override {
         QWidget::resizeEvent(e);
+        int topMargin = (height() > 700) ? 100 : 30;
+        if (auto *l = qobject_cast<QVBoxLayout*>(layout()))
+            l->setContentsMargins(20, topMargin, 20, 0);
         int labelWidth = qMin(width() - 100, 1000);
         if (m_titleLabel) m_titleLabel->setFixedWidth(labelWidth);
         if (m_artistLabel) m_artistLabel->setFixedWidth(labelWidth);
