@@ -1242,6 +1242,14 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
         }
 
+        if (key->key() == Qt::Key_F && m_playlistMode) {
+            if (isMaximized())
+                showNormal();
+            else
+                showMaximized();
+            return true;
+        }
+
         switch (key->key()) {
         case Qt::Key_Space:
             onPlayPauseClicked();
