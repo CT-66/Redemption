@@ -368,12 +368,19 @@ layout->addSpacing(4);
     }
 
             void setMaximized(bool maximized) {
-        m_isMaximized = maximized;
+                m_isMaximized = maximized;
+            }
+        // void setTitle(const QString &title) { m_titleLabel->setText(title); }
+        // void setArtist(const QString &artist) { m_artistLabel->setText(artist); }
+            void setTitle(const QString &title) { m_titleLabel->setText(title);
         }
-    // void setTitle(const QString &title) { m_titleLabel->setText(title); }
-    // void setArtist(const QString &artist) { m_artistLabel->setText(artist); }
-    void setTitle(const QString &title) { m_titleLabel->setText(title); }
-    void setArtist(const QString &artist) { m_artistLabel->setText(artist); }
+        void setArtist(const QString &artist) { m_artistLabel->setText(artist);
+        }
+
+        void setLoopShuffleButtons(QToolButton *loop, QToolButton *shuffle) {
+            m_nowPlayingLoopButton = loop;
+            m_nowPlayingShuffleButton = shuffle;
+        }
 
 
         // QLabel *titleLabel() const { return m_titleLabel; }
@@ -405,6 +412,10 @@ private:
     QHBoxLayout *m_extraLayout = nullptr;
     bool m_isMaximized = false;
 
+    bool m_compact = false;
+    QToolButton *m_nowPlayingLoopButton = nullptr;
+    QToolButton *m_nowPlayingShuffleButton = nullptr;
+
 protected:
     // void resizeEvent(QResizeEvent *e) override {
     //     QWidget::resizeEvent(e);
@@ -427,6 +438,7 @@ protected:
     // }
     void resizeEvent(QResizeEvent *e) override {
         QWidget::resizeEvent(e);
+        setCompactControls(height() <= 700);
         // int topMargin = (height() > 700) ? 100 : 30;
         // if (auto *l = qobject_cast<QVBoxLayout*>(layout()))
         //     l->setContentsMargins(20, topMargin, 20, 0);
@@ -440,6 +452,29 @@ protected:
             QTimer::singleShot(10, this, [this]() {
                 setCover(m_lastCover);
             });
+        }
+    }
+    void setCompactControls(bool compact)
+    {
+        if (compact == m_compact) return;
+        m_compact = compact;
+
+        // remove loop/shuffle from extraLayout
+        m_extraLayout->removeWidget(m_nowPlayingLoopButton);
+        m_extraLayout->removeWidget(m_nowPlayingShuffleButton);
+        m_controlsLayout->removeWidget(m_nowPlayingLoopButton);
+        m_controlsLayout->removeWidget(m_nowPlayingShuffleButton);
+
+        if (compact) {
+            // insert loop left of prev, shuffle right of next
+            m_controlsLayout->insertWidget(0, m_nowPlayingLoopButton);
+            // m_controlsLayout->insertSpacing(1, 8);
+            // m_controlsLayout->addSpacing(8);
+            m_controlsLayout->addWidget(m_nowPlayingShuffleButton);
+        } else {
+            // put them back in extraLayout
+            m_extraLayout->addWidget(m_nowPlayingLoopButton);
+            m_extraLayout->addWidget(m_nowPlayingShuffleButton);
         }
     }
 

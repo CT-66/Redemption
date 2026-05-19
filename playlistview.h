@@ -311,4 +311,5 @@ private:
     QListWidget *m_listWidget = nullptr;
     QString m_currentDir;
     QString m_currentTrack;
+    QHash<QString, QIcon> m_thumbnailCache;
 };

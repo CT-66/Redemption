@@ -14,7 +14,8 @@
 #include <QHoverEvent>
 #include <QPainterPath>
 #include <QDebug>
-
+#include <malloc.h>
+#include <QPixmapCache>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -890,6 +891,10 @@ void MainWindow::onTrackChanged(const QString &filePath)
         m_nowPlayingAmbient->updateFromCover(m_currentCover);
         m_playlistAmbient->updateFromCover(m_currentCover);
     }
+
+        // clear memory
+        QPixmapCache::clear();
+        malloc_trim(0);
 }
 
 void MainWindow::updateNowPlaying(const QString &filePath)
@@ -2712,6 +2717,8 @@ void MainWindow::setupNowPlayingControls()
             this, [this](const QPoint &) {
         showShuffleMenu(m_nowPlayingShuffleButton);
     });
+
+    m_nowPlayingPanel->setLoopShuffleButtons(m_nowPlayingLoopButton, m_nowPlayingShuffleButton);
 }
 
 void MainWindow::showLoopMenu(QToolButton *sourceBtn)
