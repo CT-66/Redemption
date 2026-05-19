@@ -247,7 +247,8 @@ public:
     // layout->addSpacing(50);
     // layout->addSpacing(isMaximized() ? 100 : 30);
     // layout->setContentsMargins(20, 50, 20, 0);
-    layout->setContentsMargins(20, 30, 20, 0);
+    // layout->setContentsMargins(20, 30, 20, 0);
+    layout->setContentsMargins(20, 30, 20, 20);
         layout->addWidget(m_coverLabel, 0, Qt::AlignCenter);
         layout->addSpacing(12);
         layout->addLayout(titleRow);  // or however your title is added
@@ -426,9 +427,12 @@ protected:
     // }
     void resizeEvent(QResizeEvent *e) override {
         QWidget::resizeEvent(e);
-        int topMargin = (height() > 700) ? 100 : 30;
+        // int topMargin = (height() > 700) ? 100 : 30;
+        // if (auto *l = qobject_cast<QVBoxLayout*>(layout()))
+        //     l->setContentsMargins(20, topMargin, 20, 0);
+        int topMargin = (height() > 700) ? 100 : 50;
         if (auto *l = qobject_cast<QVBoxLayout*>(layout()))
-            l->setContentsMargins(20, topMargin, 20, 0);
+            l->setContentsMargins(20, topMargin, 20, 20);
         int labelWidth = qMin(width() - 100, 1000);
         if (m_titleLabel) m_titleLabel->setFixedWidth(labelWidth);
         if (m_artistLabel) m_artistLabel->setFixedWidth(labelWidth);
