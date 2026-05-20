@@ -25,8 +25,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupUi();
 
-    // m_defaultWindowSize = size();  // store startup size once, never change
-    m_defaultWindowSize = QSize(900, 600);
+    m_defaultWindowSize = size();  // store startup size once, never change
+    // m_defaultWindowSize = QSize(900, 600);
     resize(m_defaultWindowSize);
 
     m_mpris = new MprisPlayer(m_engine, this);
