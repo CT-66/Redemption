@@ -154,6 +154,7 @@ public:
             // "  margin: -4px 0;"
             // "  border: 2px solid rgba(255,255,255,180);"
             // "}"
+            /*
             "QSlider::handle:horizontal {"
             "  width: 14px; height: 14px;"
             "  background: transparent;"
@@ -163,6 +164,19 @@ public:
             "QSlider::handle:horizontal:hover {"
             "  background: white;"
             "  border: 2px solid rgba(255,255,255,180);"
+            "}"
+            */
+           "QSlider::handle:horizontal {"
+            "  width: 12px; height: 12px;"
+            "  background: white;"
+            "  border-radius: 6px;"
+            "  margin: -3px 0;"
+            "}"
+            "QSlider::handle:horizontal:hover {"
+            "  background: white;"
+            "  width: 14px; height: 14px;"
+            "  border-radius: 7px;"
+            "  margin: -4px 0;"
             "}"
             // hide handle when not hovered
             // "QSlider::handle:horizontal:!hover {"

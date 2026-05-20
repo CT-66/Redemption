@@ -1298,7 +1298,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         if (key->key() == Qt::Key_F && m_playlistMode) {
             if (isMaximized()) {
                 showNormal();
-                // resize(m_defaultWindowSize);
+                QTimer::singleShot(50, this, [this]() { resize(m_defaultWindowSize); });
             }
             else
                 showMaximized();
@@ -2489,6 +2489,7 @@ void MainWindow::onViewToggled()
         refreshPlaylistView(m_engine->currentDirPath());
         m_nowPlayingPanel->setTitle(m_titleLabel->text());
         m_nowPlayingPanel->setArtist(m_artistLabel->text());
+    QTimer::singleShot(80, this, [this]() {
         m_nowPlayingAmbient->updateFromCover(
             m_currentCover.isNull() ?
             QPixmap(":/images/fallback.jpg").scaled(900, 600,
@@ -2499,6 +2500,7 @@ void MainWindow::onViewToggled()
             QPixmap(":/images/fallback.jpg").scaled(900, 600,
                 Qt::KeepAspectRatio, Qt::SmoothTransformation)
             : m_currentCover);
+    });
 
         m_ambientBar->hide();
         m_treeView->hide();
