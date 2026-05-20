@@ -25,6 +25,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupUi();
 
+    // m_defaultWindowSize = size();  // store startup size once, never change
+    m_defaultWindowSize = QSize(900, 600);
+    resize(m_defaultWindowSize);
+
     m_mpris = new MprisPlayer(m_engine, this);
 
 
@@ -1205,6 +1209,41 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
         }
     }
+
+
+    if (event->type() == QEvent::MouseButtonPress) {
+        if (obj == m_nowPlayingPanel->titleLabel()) {
+            QApplication::clipboard()->setText(
+                m_nowPlayingPanel->titleLabel()->text());
+            ToastNotification::show(this, "Copied to clipboard", "edit-copy");
+            auto *lbl = m_nowPlayingPanel->titleLabel();
+        QPalette hl = lbl->palette();
+        hl.setColor(QPalette::WindowText, palette().highlight().color());
+        lbl->setPalette(hl);
+        QTimer::singleShot(300, this, [this, lbl]() {
+            QPalette orig = lbl->palette();
+            orig.setColor(QPalette::WindowText, Qt::white);
+            lbl->setPalette(orig);
+        });
+            return true;
+        }
+        if (obj == m_nowPlayingPanel->artistLabel()) {
+            QApplication::clipboard()->setText(
+                m_nowPlayingPanel->artistLabel()->text());
+            ToastNotification::show(this, "Copied to clipboard", "edit-copy");
+             auto *lbl = m_nowPlayingPanel->artistLabel();
+        QPalette hl = lbl->palette();
+        hl.setColor(QPalette::WindowText, palette().highlight().color());
+        lbl->setPalette(hl);
+        QTimer::singleShot(300, this, [this, lbl]() {
+            QPalette orig = lbl->palette();
+            orig.setColor(QPalette::WindowText, QColor(255,255,255,180));
+            lbl->setPalette(orig);
+        });
+            return true;
+        }
+    }
+
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *key = static_cast<QKeyEvent*>(event);
         if (key->key() == Qt::Key_F && key->modifiers() & Qt::ControlModifier) {
@@ -1257,8 +1296,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         }
 
         if (key->key() == Qt::Key_F && m_playlistMode) {
-            if (isMaximized())
+            if (isMaximized()) {
                 showNormal();
+                // resize(m_defaultWindowSize);
+            }
             else
                 showMaximized();
             return true;
@@ -2340,46 +2381,12 @@ void MainWindow::onViewToggled()
     }
 }
 */
+
+/*
 void MainWindow::onViewToggled()
 {
     m_playlistMode = !m_playlistMode;
 
-    /*
-    if (m_playlistMode) {
-        refreshPlaylistView(m_engine->currentDirPath());
-        m_nowPlayingPanel->setTitle(m_titleLabel->text());
-        m_nowPlayingPanel->setArtist(m_artistLabel->text());
-        m_nowPlayingPanel->setCover(m_currentCover);
-        m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
-        m_nowPlayingAmbient->updateFromCover(m_currentCover);
-
-        m_playlistModeWidget->setGeometry(centralWidget()->rect());
-        m_playlistEffect->setOpacity(0.0);
-        m_playlistModeWidget->show();
-        m_playlistModeWidget->raise();
-
-        QPropertyAnimation *anim = new QPropertyAnimation(m_playlistEffect, "opacity");
-        anim->setDuration(300);
-        anim->setStartValue(0.0);
-        anim->setEndValue(1.0);
-        anim->setEasingCurve(QEasingCurve::InOutQuad);
-        anim->start(QAbstractAnimation::DeleteWhenStopped);
-
-        m_viewToggleButton->setIcon(QIcon::fromTheme("view-list-tree"));
-    } else {
-        QPropertyAnimation *anim = new QPropertyAnimation(m_playlistEffect, "opacity");
-        anim->setDuration(300);
-        anim->setStartValue(1.0);
-        anim->setEndValue(0.0);
-        anim->setEasingCurve(QEasingCurve::InOutQuad);
-        connect(anim, &QPropertyAnimation::finished, this, [this]() {
-            m_playlistModeWidget->hide();
-        });
-        anim->start(QAbstractAnimation::DeleteWhenStopped);
-
-        m_viewToggleButton->setIcon(QIcon::fromTheme("view-fullscreen"));
-    }
-    */
    if (m_playlistMode) {
 
         // force correct geometry BEFORE showing
@@ -2466,6 +2473,73 @@ void MainWindow::onViewToggled()
         m_treeView->setFocus();
             m_fadeOverlay->hide();
             m_fadeOverlay->setGraphicsEffect(nullptr);
+        });
+        anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        m_viewToggleButton->setIcon(QIcon::fromTheme("view-fullscreen"));
+    }
+}
+*/
+
+void MainWindow::onViewToggled()
+{
+    m_playlistMode = !m_playlistMode;
+
+    if (m_playlistMode) {
+        refreshPlaylistView(m_engine->currentDirPath());
+        m_nowPlayingPanel->setTitle(m_titleLabel->text());
+        m_nowPlayingPanel->setArtist(m_artistLabel->text());
+        m_nowPlayingAmbient->updateFromCover(
+            m_currentCover.isNull() ?
+            QPixmap(":/images/fallback.jpg").scaled(900, 600,
+                Qt::KeepAspectRatio, Qt::SmoothTransformation)
+            : m_currentCover);
+        m_playlistAmbient->updateFromCover(
+            m_currentCover.isNull() ?
+            QPixmap(":/images/fallback.jpg").scaled(900, 600,
+                Qt::KeepAspectRatio, Qt::SmoothTransformation)
+            : m_currentCover);
+
+        m_ambientBar->hide();
+        m_treeView->hide();
+
+        // start below window
+        m_playlistModeWidget->setGeometry(
+            0, centralWidget()->height(),
+            centralWidget()->width(), centralWidget()->height());
+        m_playlistModeWidget->show();
+        m_playlistModeWidget->raise();
+
+        QPropertyAnimation *anim = new QPropertyAnimation(
+            m_playlistModeWidget, "geometry");
+        anim->setDuration(250);
+        anim->setStartValue(QRect(0, centralWidget()->height(),
+            centralWidget()->width(), centralWidget()->height()));
+        anim->setEndValue(centralWidget()->rect());
+        anim->setEasingCurve(QEasingCurve::OutCubic);
+        anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        QTimer::singleShot(50, this, [this]() {
+            m_nowPlayingPanel->setCover(m_currentCover);
+            m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+            m_playlistAmbient->setGeometry(m_playlistView->rect());
+        });
+
+        m_viewToggleButton->setIcon(QIcon::fromTheme("view-list-tree"));
+
+    } else {
+        QPropertyAnimation *anim = new QPropertyAnimation(
+            m_playlistModeWidget, "geometry");
+        anim->setDuration(250);
+        anim->setStartValue(centralWidget()->rect());
+        anim->setEndValue(QRect(0, centralWidget()->height(),
+            centralWidget()->width(), centralWidget()->height()));
+        anim->setEasingCurve(QEasingCurve::InCubic);
+        connect(anim, &QPropertyAnimation::finished, this, [this]() {
+            m_playlistModeWidget->hide();
+            m_ambientBar->show();
+            m_treeView->show();
+            m_treeView->setFocus();
         });
         anim->start(QAbstractAnimation::DeleteWhenStopped);
 
@@ -2728,6 +2802,9 @@ void MainWindow::setupNowPlayingControls()
     });
 
     m_nowPlayingPanel->setLoopShuffleButtons(m_nowPlayingLoopButton, m_nowPlayingShuffleButton);
+
+    m_nowPlayingPanel->titleLabel()->installEventFilter(this);
+    m_nowPlayingPanel->artistLabel()->installEventFilter(this);
 }
 
 void MainWindow::showLoopMenu(QToolButton *sourceBtn)
@@ -2866,6 +2943,8 @@ if (m_playlistMode)
     menu.exec(sourceBtn->mapToGlobal(QPoint(0, sourceBtn->height())));
 }
 
+
+/*
 void MainWindow::changeEvent(QEvent *e)
 {
     QMainWindow::changeEvent(e);
@@ -2882,3 +2961,58 @@ void MainWindow::changeEvent(QEvent *e)
     }
 }
 
+*/
+
+void MainWindow::changeEvent(QEvent *e)
+{
+    QMainWindow::changeEvent(e);
+    if (e->type() == QEvent::WindowStateChange) {
+        QWindowStateChangeEvent *wse =
+            static_cast<QWindowStateChangeEvent*>(e);
+
+        bool wasMaximized = wse->oldState() & Qt::WindowMaximized;
+        bool wasMinimized = wse->oldState() & Qt::WindowMinimized;
+        bool isNowNormal = !(windowState() & Qt::WindowMaximized) &&
+                           !(windowState() & Qt::WindowMinimized);
+        bool isNowMaximized = windowState() & Qt::WindowMaximized;
+
+        // coming back from tray (minimized) — restore previous state
+        if (wasMinimized && isNowMaximized) {
+            // was fullscreen before tray, restore fullscreen — do nothing
+        } else if (wasMinimized && isNowNormal) {
+            // was normal before tray, restore default size
+            QTimer::singleShot(0, this, [this]() {
+                resize(m_defaultWindowSize);
+            });
+        } else if (wasMaximized && isNowNormal) {
+            // leaving fullscreen — always restore default size
+            QTimer::singleShot(0, this, [this]() {
+                resize(m_defaultWindowSize);
+            });
+        }
+
+        // playlist mode geometry
+        if (m_playlistMode) {
+            QTimer::singleShot(100, this, [this]() {
+                if (!m_playlistModeWidget || !centralWidget()) return;
+                m_playlistModeWidget->setGeometry(centralWidget()->rect());
+                m_playlistModeWidget->raise();
+                if (m_playlistAmbient && m_playlistView)
+                    m_playlistAmbient->setGeometry(m_playlistView->rect());
+                if (m_nowPlayingAmbient && m_nowPlayingPanel)
+                    m_nowPlayingAmbient->setGeometry(m_nowPlayingPanel->rect());
+                if (!m_currentCover.isNull())
+                    m_nowPlayingPanel->setCover(m_currentCover);
+                m_playlistModeWidget->update();
+            });
+        }
+    }
+    bool isNowNormal = !(windowState() & Qt::WindowMaximized) &&
+                           !(windowState() & Qt::WindowMinimized);
+
+        if (isNowNormal) {
+            QTimer::singleShot(0, this, [this]() {
+                resize(m_defaultWindowSize);
+            });
+        }
+}

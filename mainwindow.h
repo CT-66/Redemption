@@ -168,6 +168,8 @@ private:
     QToolButton *m_nowPlayingLoopButton   = nullptr;
     QToolButton *m_nowPlayingShuffleButton = nullptr;
 
+    QSize m_defaultWindowSize;
+
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
