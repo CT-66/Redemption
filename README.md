@@ -3,10 +3,11 @@
 - icon
 - android
 
-- blur optimize memory; not releasing memory / constant memory
-- need good animation
 - visualizer?
-- consistent geometry
-- scrollbar
+
+- scrollbar drag
+- tray artifact
+- seekbar stutter
+- shared blur
 
 - no cover art placeholder overlap

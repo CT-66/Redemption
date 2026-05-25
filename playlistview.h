@@ -12,6 +12,8 @@
 #include <QPixmap>
 #include <QPainter>
 #include <QPainterPath>
+#include <QScrollBar>
+#include <QEvent>
 
 #include "metadatareader.h"
 
@@ -70,7 +72,36 @@ public:
             "}"
         );
         m_listWidget->setIconSize(QSize(40, 40));
-        m_listWidget->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        // m_listWidget->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        m_listWidget->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        m_listWidget->verticalScrollBar()->setStyleSheet(
+            "QScrollBar:vertical {"
+            "  width: 4px;"
+            "  background: transparent;"
+            "  margin: 0px;"
+            "}"
+            "QScrollBar::handle:vertical {"
+            "  background: rgba(255,255,255,60);"
+            "  border-radius: 2px;"
+            "  min-height: 20px;"
+            "}"
+            "QScrollBar::handle:vertical:hover {"
+            "  background: rgba(255,255,255,120);"
+            "}"
+            "QScrollBar::add-line:vertical,"
+            "QScrollBar::sub-line:vertical {"
+            "  height: 0px;"
+            "}"
+            "QScrollBar::add-page:vertical,"
+            "QScrollBar::sub-page:vertical {"
+            "  background: transparent;"
+            "}"
+        );
+
+        m_listWidget->installEventFilter(this);
+        m_listWidget->viewport()->installEventFilter(this);
+
+
         m_listWidget->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
         QVBoxLayout *layout = new QVBoxLayout(this);
@@ -321,6 +352,19 @@ public:
     QToolButton *searchButton() const { return m_searchButton; }
     QListWidget *listWidget() const { return m_listWidget; }
     QString currentDir() const { return m_currentDir; }
+
+
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *e) override {
+        if (obj == m_listWidget || obj == m_listWidget->viewport()) {
+            if (e->type() == QEvent::Enter)
+                m_listWidget->verticalScrollBar()->show();
+            else if (e->type() == QEvent::Leave)
+                m_listWidget->verticalScrollBar()->hide();
+        }
+        return QWidget::eventFilter(obj, e);
+    }
 
 private:
     QLabel *m_dirLabel = nullptr;
