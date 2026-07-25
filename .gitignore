@@ -3,7 +3,14 @@ output/
 
 *.o
 *.so
+*.moc
 
 .bak/
 
+moc_*
+qrc_*
+*.pro.user
+
 TODO.md
+
+Redemption
