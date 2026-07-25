@@ -47,7 +47,7 @@ sudo pacman -S qt6-base mpv taglib
 
 ## Releases
 
-Binary was compiled on Arch Linux and an AppImage for other distros are available on the releases page.
+A binary compiled for Arch is available on the releases page. 
 
 ## Building
 
