@@ -14,6 +14,7 @@ no playlists to manage, no library to import, just your music and your folders.
     <td align="center">Playlist View</td>
   </tr>
 </table>
+
 ## Features
 
 - **Recursive filesystem playback** — play a song, Redemption continues through
