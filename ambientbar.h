@@ -17,6 +17,9 @@
 
 static void blurH(float *buf, int w, int h, int r)
 {
+    if (w <= 0 || h <= 0 || r <= 0) return;
+    r = qMin(r, (w - 1) / 2);
+
     const float inv = 1.0f / float(r * 2 + 1);
     std::vector<float> row(size_t(w + r * 2) * 3);
 
@@ -136,9 +139,18 @@ public:
         const int targetH = height() > 0 ? height() : 175;
 
         auto future = QtConcurrent::run([src, targetW, targetH]() {
+            if (src.width() <= 0 || src.height() <= 0 ||
+                targetW <= 0 || targetH <= 0)
+                return QPair<QImage, QColor>(QImage(), QColor(30, 30, 40));
+
             const QImage half = src.scaled(
-                src.width() / 2, src.height() / 2,
+                qMax(1, src.width() / 2),
+                qMax(1, src.height() / 2),
                 Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+
+            // const QImage half = src.scaled(
+            //     src.width() / 2, src.height() / 2,
+            //     Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
             const QImage blurred = separableGaussianBlur(half, 30);
             QImage result = blurred.scaled(
                 targetW, targetH,
