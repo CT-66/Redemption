@@ -47,7 +47,15 @@ sudo pacman -S qt6-base mpv taglib
 
 ## Releases
 
-A binary compiled for Arch is available on the releases page. 
+### Arch Linux
+
+The package can be installed using the AUR: [redemption-bin](https://aur.archlinux.org/packages/redemption-bin)
+
+The compiled binary is also available on the releases page.
+
+### Other distros
+
+An experimental Flatpak is available, though it isn't extensively tested and proper compatibility isn't guaranteed. An AppImage might be available in the future.
 
 ## Building
 
