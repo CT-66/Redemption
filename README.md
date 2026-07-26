@@ -131,7 +131,6 @@ not currently planned.
 
 - Configurable root music path
 - Remember last played track and position
-- AUR package
 - Loop/shuffle state persistence
 - Bookmarks/favorites
 - Configurable keyboard shortcuts
