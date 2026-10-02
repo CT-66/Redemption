@@ -62,7 +62,7 @@ An experimental Flatpak is available, though it isn't extensively tested and pro
 ```bash
 git clone https://github.com/CT-66/Redemption.git
 cd Redemption
-qmake
+qmake6
 make
 ```
 
