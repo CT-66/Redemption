@@ -1,17 +1,16 @@
 #include "mprisplayer.h"
+#include <QApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
-#include <QApplication>
-#include <QFileInfo>
-#include <QTemporaryFile>
-#include <QStandardPaths>
-#include <QUrl>
-#include <QFile>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QStandardPaths>
+#include <QTemporaryFile>
+#include <QUrl>
 
 MprisPlayer::MprisPlayer(PlaybackEngine *engine, QObject *parent)
-    : QObject(parent), m_engine(engine)
-{
+    : QObject(parent), m_engine(engine) {
     new MprisRootAdaptor(this);
     new MprisPlayerAdaptor(this, engine);
 
@@ -24,17 +23,16 @@ MprisPlayer::MprisPlayer(PlaybackEngine *engine, QObject *parent)
     connect(m_positionTimer, &QTimer::timeout, this, [this]() {
         if (m_engine->isPlaying()) {
             double pos = 0;
-            mpv_get_property(m_engine->mpvHandle(), "time-pos", MPV_FORMAT_DOUBLE, &pos);
+            mpv_get_property(m_engine->mpvHandle(), "time-pos",
+                             MPV_FORMAT_DOUBLE, &pos);
             qlonglong posUs = static_cast<qlonglong>(pos * 1e6);
 
             QDBusMessage signal = QDBusMessage::createSignal(
-                "/org/mpris/MediaPlayer2",
-                "org.freedesktop.DBus.Properties",
+                "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties",
                 "PropertiesChanged");
             QVariantMap changed;
             changed["Position"] = posUs;
-            signal << "org.mpris.MediaPlayer2.Player"
-                   << changed
+            signal << "org.mpris.MediaPlayer2.Player" << changed
                    << QStringList();
             QDBusConnection::sessionBus().send(signal);
         }
@@ -43,7 +41,8 @@ MprisPlayer::MprisPlayer(PlaybackEngine *engine, QObject *parent)
 }
 
 // void MprisPlayer::updateMetadata(const QString &title, const QString &artist,
-//                                   const QString &filePath, const QPixmap &cover)
+//                                   const QString &filePath, const QPixmap
+//                                   &cover)
 // {
 //     m_trackId = "/org/musicplayer/track/" +
 //         QString::number(qHash(filePath));
@@ -63,7 +62,8 @@ MprisPlayer::MprisPlayer(PlaybackEngine *engine, QObject *parent)
 //             QString::number(qHash(filePath)) + ".png";
 //         if (!QFile::exists(coverPath))
 //             cover.save(coverPath);
-//         m_metadata["mpris:artUrl"] = QUrl::fromLocalFile(coverPath).toString();
+//         m_metadata["mpris:artUrl"] =
+//         QUrl::fromLocalFile(coverPath).toString();
 //     }
 
 //     // notify properties changed
@@ -82,14 +82,13 @@ MprisPlayer::MprisPlayer(PlaybackEngine *engine, QObject *parent)
 // }
 
 void MprisPlayer::updateMetadata(const QString &title, const QString &artist,
-                                  const QString &filePath, const QPixmap &cover)
-{
-    m_trackId = "/org/redemption/track/" +
-        QString::number(qHash(filePath));
+                                 const QString &filePath,
+                                 const QPixmap &cover) {
+    m_trackId = "/org/redemption/track/" + QString::number(qHash(filePath));
 
     m_metadata.clear();
-    m_metadata["mpris:trackid"] = QVariant::fromValue(
-        QDBusObjectPath(m_trackId));
+    m_metadata["mpris:trackid"] =
+        QVariant::fromValue(QDBusObjectPath(m_trackId));
     m_metadata["xesam:title"] = title;
     if (!artist.isEmpty())
         m_metadata["xesam:artist"] = QStringList{artist};
@@ -97,26 +96,37 @@ void MprisPlayer::updateMetadata(const QString &title, const QString &artist,
 
     // add duration in microseconds
     double duration = 0;
-    mpv_get_property(m_engine->mpvHandle(), "duration", MPV_FORMAT_DOUBLE, &duration);
+    mpv_get_property(m_engine->mpvHandle(), "duration", MPV_FORMAT_DOUBLE,
+                     &duration);
     if (duration > 0)
         m_metadata["mpris:length"] = static_cast<qlonglong>(duration * 1e6);
 
     // cover art
-    // if (!cover.isNull()) {
-    //     QString coverPath = QStandardPaths::writableLocation(
-    //         QStandardPaths::TempLocation) + "/musicplayer_cover_" +
-    //         QString::number(qHash(filePath)) + ".png";
-    //     if (!QFile::exists(coverPath))
-    //         cover.save(coverPath);
-    //     m_metadata["mpris:artUrl"] = QUrl::fromLocalFile(coverPath).toString();
-    // }
+    /*
     if (!cover.isNull()) {
-        QString cacheDir = QStandardPaths::writableLocation(
-            QStandardPaths::TempLocation) + "/Redemption";
+        QString cacheDir =
+            QStandardPaths::writableLocation(QStandardPaths::TempLocation) +
+            "/Redemption";
         QDir().mkpath(cacheDir);
 
-        QString coverPath = cacheDir + "/cover_" +
-            QString::number(qHash(filePath)) + ".png";
+        QString coverPath =
+            cacheDir + "/cover_" + QString::number(qHash(filePath)) + ".png";
+        if (!QFile::exists(coverPath))
+            cover.save(coverPath);
+        m_metadata["mpris:artUrl"] = QUrl::fromLocalFile(coverPath).toString();
+    }
+    */
+    if (!cover.isNull()) {
+        QString runtimeDir = qgetenv("XDG_RUNTIME_DIR");
+        if (runtimeDir.isEmpty())
+            runtimeDir =
+                QString("/tmp/redemption-%1").arg(qgetenv("USER").constData());
+
+        QString cacheDir = runtimeDir + "/redemption";
+        QDir().mkpath(cacheDir);
+
+        QString coverPath =
+            cacheDir + "/cover_" + QString::number(qHash(filePath)) + ".png";
         if (!QFile::exists(coverPath))
             cover.save(coverPath);
         m_metadata["mpris:artUrl"] = QUrl::fromLocalFile(coverPath).toString();
@@ -128,40 +138,31 @@ void MprisPlayer::updateMetadata(const QString &title, const QString &artist,
     changed["PlaybackStatus"] = m_engine->isPlaying() ? "Playing" : "Paused";
 
     QDBusMessage signal = QDBusMessage::createSignal(
-        "/org/mpris/MediaPlayer2",
-        "org.freedesktop.DBus.Properties",
+        "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties",
         "PropertiesChanged");
-    signal << "org.mpris.MediaPlayer2.Player"
-           << changed
-           << QStringList();
+    signal << "org.mpris.MediaPlayer2.Player" << changed << QStringList();
     QDBusConnection::sessionBus().send(signal);
 }
 
-void MprisPlayer::updatePlaybackStatus()
-{
+void MprisPlayer::updatePlaybackStatus() {
     QVariantMap changed;
     changed["PlaybackStatus"] = m_engine->isPlaying() ? "Playing" : "Paused";
 
     QDBusMessage signal = QDBusMessage::createSignal(
-        "/org/mpris/MediaPlayer2",
-        "org.freedesktop.DBus.Properties",
+        "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties",
         "PropertiesChanged");
-    signal << "org.mpris.MediaPlayer2.Player"
-           << changed
-           << QStringList();
+    signal << "org.mpris.MediaPlayer2.Player" << changed << QStringList();
     QDBusConnection::sessionBus().send(signal);
 }
 
-void MprisPlayer::updatePosition()
-{
+void MprisPlayer::updatePosition() {
     double pos = 0;
-    mpv_get_property(m_engine->mpvHandle(), "time-pos", MPV_FORMAT_DOUBLE, &pos);
+    mpv_get_property(m_engine->mpvHandle(), "time-pos", MPV_FORMAT_DOUBLE,
+                     &pos);
     qlonglong posUs = static_cast<qlonglong>(pos * 1e6);
 
     QDBusMessage signal = QDBusMessage::createSignal(
-        "/org/mpris/MediaPlayer2",
-        "org.mpris.MediaPlayer2.Player",
-        "Seeked");
+        "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player", "Seeked");
     signal << posUs;
     QDBusConnection::sessionBus().send(signal);
 }
@@ -173,31 +174,29 @@ MprisRootAdaptor::MprisRootAdaptor(MprisPlayer *parent)
 
 // --- MprisPlayerAdaptor ---
 
-MprisPlayerAdaptor::MprisPlayerAdaptor(MprisPlayer *mpris, PlaybackEngine *engine)
+MprisPlayerAdaptor::MprisPlayerAdaptor(MprisPlayer *mpris,
+                                       PlaybackEngine *engine)
     : QDBusAbstractAdaptor(mpris), m_mpris(mpris), m_engine(engine) {}
 
-QString MprisPlayerAdaptor::playbackStatus() const
-{
+QString MprisPlayerAdaptor::playbackStatus() const {
     return m_engine->isPlaying() ? "Playing" : "Paused";
 }
 
-double MprisPlayerAdaptor::volume() const
-{
+double MprisPlayerAdaptor::volume() const {
     double vol = 0;
     mpv_get_property(m_engine->mpvHandle(), "volume", MPV_FORMAT_DOUBLE, &vol);
     return vol / 100.0;
 }
 
-void MprisPlayerAdaptor::setVolume(double vol)
-{
+void MprisPlayerAdaptor::setVolume(double vol) {
     double v = vol * 100.0;
     mpv_set_property(m_engine->mpvHandle(), "volume", MPV_FORMAT_DOUBLE, &v);
 }
 
-qlonglong MprisPlayerAdaptor::position() const
-{
+qlonglong MprisPlayerAdaptor::position() const {
     double pos = 0;
-    mpv_get_property(m_engine->mpvHandle(), "time-pos", MPV_FORMAT_DOUBLE, &pos);
+    mpv_get_property(m_engine->mpvHandle(), "time-pos", MPV_FORMAT_DOUBLE,
+                     &pos);
     return static_cast<qlonglong>(pos * 1e6);
 }
 
@@ -207,18 +206,17 @@ void MprisPlayerAdaptor::Pause() { m_engine->pause(); }
 void MprisPlayerAdaptor::Play() { m_engine->resume(); }
 void MprisPlayerAdaptor::Stop() { m_engine->stop(); }
 
-void MprisPlayerAdaptor::PlayPause()
-{
+void MprisPlayerAdaptor::PlayPause() {
     if (m_engine->isPlaying())
         m_engine->pause();
     else
         m_engine->resume();
 }
 
-void MprisPlayerAdaptor::Seek(qlonglong offset)
-{
+void MprisPlayerAdaptor::Seek(qlonglong offset) {
     double pos = 0;
-    mpv_get_property(m_engine->mpvHandle(), "time-pos", MPV_FORMAT_DOUBLE, &pos);
+    mpv_get_property(m_engine->mpvHandle(), "time-pos", MPV_FORMAT_DOUBLE,
+                     &pos);
     pos += offset / 1e6;
     const QString cmd = QString::number(pos, 'f', 2);
     QByteArray ba = cmd.toUtf8();
@@ -226,8 +224,8 @@ void MprisPlayerAdaptor::Seek(qlonglong offset)
     mpv_command(m_engine->mpvHandle(), args);
 }
 
-void MprisPlayerAdaptor::SetPosition(const QDBusObjectPath &, qlonglong position)
-{
+void MprisPlayerAdaptor::SetPosition(const QDBusObjectPath &,
+                                     qlonglong position) {
     double pos = position / 1e6;
     const QString cmd = QString::number(pos, 'f', 2);
     QByteArray ba = cmd.toUtf8();
@@ -235,20 +233,15 @@ void MprisPlayerAdaptor::SetPosition(const QDBusObjectPath &, qlonglong position
     mpv_command(m_engine->mpvHandle(), args);
 }
 
-
-void MprisPlayer::updateDuration(double duration)
-{
+void MprisPlayer::updateDuration(double duration) {
     m_metadata["mpris:length"] = static_cast<qlonglong>(duration * 1e6);
 
     QVariantMap changed;
     changed["Metadata"] = m_metadata;
 
     QDBusMessage signal = QDBusMessage::createSignal(
-        "/org/mpris/MediaPlayer2",
-        "org.freedesktop.DBus.Properties",
+        "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties",
         "PropertiesChanged");
-    signal << "org.mpris.MediaPlayer2.Player"
-           << changed
-           << QStringList();
+    signal << "org.mpris.MediaPlayer2.Player" << changed << QStringList();
     QDBusConnection::sessionBus().send(signal);
 }

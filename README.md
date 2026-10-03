@@ -108,9 +108,7 @@ and stores nothing remotely. No analytics, no telemetry, no network requests of
 any kind. The only data written to disk is your settings file at
 `~/.config/Redemption/settings.ini`.
 
-Cover art is temporarily saved to `/tmp/Redemption/` for MPRIS2 integration
-(taskbar widgets and media players that request album art). This is cleared on
-each run.
+Cover art is stored in `$XDG_RUNTIME_DIR` for MPRIS2 integration, which is usually at `/run/user/1000` and changes per user. This is cleared on each system reboot.
 
 ## Platform Support
 
